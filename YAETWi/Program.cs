@@ -7,9 +7,12 @@ using Microsoft.Diagnostics.Tracing;
 using Microsoft.Diagnostics.Tracing.Parsers;
 using Microsoft.Diagnostics.Tracing.Parsers.Kernel;
 using Microsoft.Diagnostics.Tracing.Session;
+using Microsoft.Diagnostics;
 
 using YAETWi.Helper;
 using System.Diagnostics.Eventing.Reader;
+using System.Diagnostics;
+using System.Diagnostics.Tracing;
 
 namespace YAETWi
 {
@@ -20,7 +23,7 @@ namespace YAETWi
         static void Main(string[] args)
         {
             Dictionary<string, string> parameters = new Dictionary<string, string>();
-            if (args.Length != 2)
+            if (args.Length != 3)
             {
                 Helper.Help.usage();
                 Environment.Exit(0);
@@ -28,6 +31,26 @@ namespace YAETWi
             else
             {
                 parameters = Helper.ArgParser.parse(args);
+            }
+
+            Dictionary<int, string> eventDescriptor = new Dictionary<int, string>();
+            Dictionary<int, string> opcodeDescriptor = new Dictionary<int, string>();
+            bool verbose = Convert.ToBoolean(parameters?["/verbose"] ?? "false");
+            Console.WriteLine("Verbose: " + verbose);
+            if (verbose)
+            {
+                ProviderMetadata meta = new ProviderMetadata(parameters["/provider"]);
+                Console.WriteLine(String.Format("[*] starting custom session: {0}", meta.Name));
+                IEnumerable<EventMetadata> events = meta.Events;
+                foreach (EventMetadata m in events)
+                {
+                    eventDescriptor[(int)m.Id] = m.Description;
+                }
+                IList<System.Diagnostics.Eventing.Reader.EventOpcode> opcodes = meta.Opcodes;
+                foreach (System.Diagnostics.Eventing.Reader.EventOpcode o in opcodes)
+                {
+                    opcodeDescriptor[o.Value] = o.DisplayName;
+                }
             }
 
             var kernelSession = new TraceEventSession(KernelTraceEventParser.KernelSessionName);
@@ -55,8 +78,8 @@ namespace YAETWi
                     dict[Logger.Log.timestamp.ToString()] = new Nullable<DateTime>();
                     dict[Logger.Log.process.ToString()] = data.ProcessName;
                     dict[Logger.Log.providerId.ToString()] = new Nullable<System.Guid>();
-                    dict[Logger.Log.eventName.ToString()] = new List<string>();
-                    dict[Logger.Log.opcodeName.ToString()] = new List<string>();
+                    dict[Logger.Log.eventId.ToString()] = new List<int>();
+                    dict[Logger.Log.opcodeId.ToString()] = new List<int>();
                     pidAggr.Add(data.ProcessID, dict);
                 }
             });
@@ -65,8 +88,6 @@ namespace YAETWi
 
             var impacketSession = new TraceEventSession("Impacket session");
             impacketSession.EnableProvider(parameters["/provider"]);
-            ProviderMetadata meta = new ProviderMetadata(parameters["/provider"]);
-            Console.WriteLine(String.Format("[*] starting custom session: {0}", meta.Name));
 
             impacketSession.Source.AllEvents += ((TraceEvent data) =>
             {
@@ -76,8 +97,8 @@ namespace YAETWi
                     Dictionary<string, object> dict = pidAggr[data.ProcessID];
                     dict[Logger.Log.timestamp.ToString()]   = data.TimeStamp;
                     dict[Logger.Log.providerId.ToString()]  = data.ProviderGuid;
-                    ((List<string>)dict[Logger.Log.eventName.ToString()]).Add(data.EventName);
-                    ((List<string>)dict[Logger.Log.opcodeName.ToString()]).Add(data.OpcodeName);
+                    ((List<int>)dict[Logger.Log.eventId.ToString()]).Add(UInt16.Parse(data.EventName.Split('(', ')')[1]));
+                    ((List<int>)dict[Logger.Log.opcodeId.ToString()]).Add((int)data.Opcode);
                 }
             });
 
@@ -107,7 +128,14 @@ namespace YAETWi
                     {
                         foreach (int pid in pidAggr.Keys)
                         {
-                            Logger.ticker(pid, pidAggr);
+                            if (!verbose)
+                            {
+                                Logger.ticker(pid, pidAggr);
+                            }
+                            else
+                            {
+                                Logger.ticker(pid, pidAggr, eventDescriptor, opcodeDescriptor);
+                            }
                         }
                     }
                 }

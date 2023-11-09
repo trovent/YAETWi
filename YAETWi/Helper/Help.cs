@@ -10,7 +10,7 @@ namespace YAETWi.Helper
     {
         public static void usage()
         {
-            Console.WriteLine("Usage: exe /externalIP=<IP> /provider=<name>");
+            Console.WriteLine("Usage: exe /externalIP=<IP> /provider=<name> /verbose=[true,false]");
         }
     }
 }
