@@ -1,24 +1,35 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections;
 
 using System.Threading.Tasks;
 using Microsoft.Diagnostics.Tracing;
 using Microsoft.Diagnostics.Tracing.Parsers;
-using Microsoft.Diagnostics.Tracing.Parsers.AspNet;
 using Microsoft.Diagnostics.Tracing.Parsers.Kernel;
 using Microsoft.Diagnostics.Tracing.Session;
 
 using YAETWi.Helper;
+using System.Diagnostics.Eventing.Reader;
 
 namespace YAETWi
 {
     class Program
     {
-
-        private static Dictionary<int, Dictionary<string, object>> pidAggregator = new Dictionary<int, Dictionary<string, object>>();
-        
+        private static Dictionary<int, Dictionary<string, object>> pidAggr;
+        private static int extConn = 0;
         static void Main(string[] args)
         {
+            Dictionary<string, string> parameters = new Dictionary<string, string>();
+            if (args.Length != 2)
+            {
+                Helper.Help.usage();
+                Environment.Exit(0);
+            }
+            else
+            {
+                parameters = Helper.ArgParser.parse(args);
+            }
+
             var kernelSession = new TraceEventSession(KernelTraceEventParser.KernelSessionName);
 
             kernelSession.EnableKernelProvider(KernelTraceEventParser.Keywords.NetworkTCPIP    |
@@ -35,44 +46,38 @@ namespace YAETWi
                 Console.WriteLine(String.Format("{0}\tStream: {1}\tEvent: {2}\tOpcode: {3}", data.TimeStamp, dataStream, data.EventName, data.OpcodeName));
                 Console.WriteLine(String.Format("\t\t\tconn: {0} -> :{1}\tproc: {2} -> {3}", data.daddr, data.sport, data.ProcessID, data.ProcessName));
 
-
-                if (data.daddr.ToString() == "192.168.178.20")
+                if (data.daddr.ToString() == parameters["/externalIP"])
                 {
-                    if (!pidAggregator.ContainsKey(data.ProcessID))
-                    {
-                        var dict = new Dictionary<string, object>();
-                        dict[Logger.Log.timestamp.ToString()]   = new Nullable<DateTime>();
-                        dict[Logger.Log.process.ToString()]     = data.ProcessName;
-                        dict[Logger.Log.providerId.ToString()]  = new Nullable<System.Guid>();
-                        dict[Logger.Log.eventIndex.ToString()]  = null;
-                        dict[Logger.Log.eventName.ToString()]   = null;
-                        dict[Logger.Log.opcodeId.ToString()]    = null;
-                        dict[Logger.Log.opcodeName.ToString()]  = null;
-                        pidAggregator.Add(data.ProcessID, dict);
-                    }
+                    extConn++;
+                    pidAggr = new Dictionary<int, Dictionary<string, object>>();
+                    /* clear on every event, otherwise check on condition (!pidAggregator.ContainsKey(data.ProcessID)) */
+                    var dict = new Dictionary<string, object>();
+                    dict[Logger.Log.timestamp.ToString()] = new Nullable<DateTime>();
+                    dict[Logger.Log.process.ToString()] = data.ProcessName;
+                    dict[Logger.Log.providerId.ToString()] = new Nullable<System.Guid>();
+                    dict[Logger.Log.eventName.ToString()] = new List<string>();
+                    dict[Logger.Log.opcodeName.ToString()] = new List<string>();
+                    pidAggr.Add(data.ProcessID, dict);
                 }
             });
 
             Task.Run(() => kernelSession.Source.Process());
 
             var impacketSession = new TraceEventSession("Impacket session");
-            Console.WriteLine("[*] starting impacket session");
-            impacketSession.EnableProvider("Microsoft-Windows-RemoteDesktopServices-RdpCoreTS");
+            impacketSession.EnableProvider(parameters["/provider"]);
+            ProviderMetadata meta = new ProviderMetadata(parameters["/provider"]);
+            Console.WriteLine(String.Format("[*] starting custom session: {0}", meta.Name));
 
             impacketSession.Source.AllEvents += ((TraceEvent data) =>
             {
-                if (data.ProviderGuid.ToString().Equals("1139c61b-b549-4251-8ed3-27250a1edec8"))
+                /* check all events, otherwise check on condition: (data.ProviderGuid.ToString().Equals("1139c61b-b549-4251-8ed3-27250a1edec8")) */
+                if (pidAggr.ContainsKey(data.ProcessID))
                 {
-                    if (pidAggregator.ContainsKey(data.ProcessID))
-                    {
-                        Dictionary<string, object> dict = pidAggregator[data.ProcessID];
-                        dict[Logger.Log.timestamp.ToString()]   = data.TimeStamp;
-                        dict[Logger.Log.providerId.ToString()]  = data.ProviderGuid;
-                        dict[Logger.Log.eventIndex.ToString()]  = data.EventIndex;
-                        dict[Logger.Log.eventName.ToString()]   = data.EventName;
-                        dict[Logger.Log.opcodeId.ToString()]    = data.Opcode;
-                        dict[Logger.Log.opcodeName.ToString()]  = data.OpcodeName;
-                    }
+                    Dictionary<string, object> dict = pidAggr[data.ProcessID];
+                    dict[Logger.Log.timestamp.ToString()]   = data.TimeStamp;
+                    dict[Logger.Log.providerId.ToString()]  = data.ProviderGuid;
+                    ((List<string>)dict[Logger.Log.eventName.ToString()]).Add(data.EventName);
+                    ((List<string>)dict[Logger.Log.opcodeName.ToString()]).Add(data.OpcodeName);
                 }
             });
 
@@ -85,7 +90,11 @@ namespace YAETWi
                 Console.CancelKeyPress += delegate (object sender, ConsoleCancelEventArgs e)
                 {
                     var end = DateTime.Now;
-                    Console.WriteLine(String.Format("[*] Session started: {0}\n[*] Session ended: {1}\n[*] Overall time: {2}", start, end, end - start));
+                    Console.WriteLine(String.Format("[*] Session started: {0}\n[*] Session ended: {1}\n[*] Overall time: {2}\n[*] Overall external connections: {3}", 
+                        start, 
+                        end, 
+                        end - start,
+                        extConn));
                     kernelSession.Dispose();
                     impacketSession.Dispose();
                     Environment.Exit(0);
@@ -94,9 +103,12 @@ namespace YAETWi
                 var cki = Console.ReadKey();
                 if (cki.Key == ConsoleKey.D)
                 {
-                    foreach (int pid in pidAggregator.Keys)
+                    if (pidAggr != null)
                     {
-                        Logger.ticker(pid, pidAggregator);
+                        foreach (int pid in pidAggr.Keys)
+                        {
+                            Logger.ticker(pid, pidAggr);
+                        }
                     }
                 }
             }
