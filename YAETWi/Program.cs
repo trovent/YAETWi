@@ -1,13 +1,14 @@
 ﻿using System;
-using System.Collections;
-using System.Diagnostics;
 using System.Collections.Generic;
 
 using System.Threading.Tasks;
 using Microsoft.Diagnostics.Tracing;
 using Microsoft.Diagnostics.Tracing.Parsers;
+using Microsoft.Diagnostics.Tracing.Parsers.AspNet;
 using Microsoft.Diagnostics.Tracing.Parsers.Kernel;
 using Microsoft.Diagnostics.Tracing.Session;
+
+using YAETWi.Helper;
 
 namespace YAETWi
 {
@@ -15,47 +16,6 @@ namespace YAETWi
     {
 
         private static Dictionary<int, Dictionary<string, object>> pidAggregator = new Dictionary<int, Dictionary<string, object>>();
-
-        private static void ticker(int pid)
-        {
-            Console.WriteLine(pidAggregator.ContainsKey(pid));
-
-            DateTime timestamp;
-            string process;
-            string providerId;
-            EventIndex eventId;
-            TraceEventOpcode opcodeId;
-
-            //TODO: StringBuilder create
-
-            if (pidAggregator[pid].ContainsKey("timestamp"))
-            {
-                timestamp = (DateTime)pidAggregator[pid]["timestamp"];
-                Console.WriteLine(timestamp);
-            }
-            if (pidAggregator[pid].ContainsKey("process"))
-            {
-                process = (string)pidAggregator[pid]["process"];
-                Console.WriteLine(process);
-            }
-            if (pidAggregator[pid].ContainsKey("providerId"))
-            {
-                providerId = pidAggregator[pid]["providerId"].ToString();
-                Console.WriteLine(providerId);
-            }
-            if (pidAggregator[pid].ContainsKey("eventId"))
-            {
-                eventId = (EventIndex)pidAggregator[pid]["eventId"];
-                Console.WriteLine(eventId);
-            }
-            if (pidAggregator[pid].ContainsKey("opcodeId"))
-            {
-                opcodeId = (TraceEventOpcode)pidAggregator[pid]["opcodeId"];
-                Console.WriteLine(opcodeId);
-            }
-            Console.WriteLine(String.Format("{0} pid: {1} -> {2}, providerId: {3}, eventId: {4}, opcodeId: {5}",
-            "", "", "", "", "", ""));
-        }
         
         static void Main(string[] args)
         {
@@ -81,7 +41,13 @@ namespace YAETWi
                     if (!pidAggregator.ContainsKey(data.ProcessID))
                     {
                         var dict = new Dictionary<string, object>();
-                        dict["process"] = data.ProcessName; 
+                        dict[Logger.Log.timestamp.ToString()]   = new Nullable<DateTime>();
+                        dict[Logger.Log.process.ToString()]     = data.ProcessName;
+                        dict[Logger.Log.providerId.ToString()]  = new Nullable<System.Guid>();
+                        dict[Logger.Log.eventIndex.ToString()]  = null;
+                        dict[Logger.Log.eventName.ToString()]   = null;
+                        dict[Logger.Log.opcodeId.ToString()]    = null;
+                        dict[Logger.Log.opcodeName.ToString()]  = null;
                         pidAggregator.Add(data.ProcessID, dict);
                     }
                 }
@@ -100,10 +66,12 @@ namespace YAETWi
                     if (pidAggregator.ContainsKey(data.ProcessID))
                     {
                         Dictionary<string, object> dict = pidAggregator[data.ProcessID];
-                        dict["timestamp"] = data.TimeStamp;
-                        dict["providerId"] = data.ProviderGuid;
-                        dict["eventId"] = data.EventIndex;
-                        dict["opcodeId"] = data.Opcode;
+                        dict[Logger.Log.timestamp.ToString()]   = data.TimeStamp;
+                        dict[Logger.Log.providerId.ToString()]  = data.ProviderGuid;
+                        dict[Logger.Log.eventIndex.ToString()]  = data.EventIndex;
+                        dict[Logger.Log.eventName.ToString()]   = data.EventName;
+                        dict[Logger.Log.opcodeId.ToString()]    = data.Opcode;
+                        dict[Logger.Log.opcodeName.ToString()]  = data.OpcodeName;
                     }
                 }
             });
@@ -128,8 +96,7 @@ namespace YAETWi
                 {
                     foreach (int pid in pidAggregator.Keys)
                     {
-                        Console.WriteLine("found pid : " + pid);
-                        ticker(pid);
+                        Logger.ticker(pid, pidAggregator);
                     }
                 }
             }
