@@ -13,6 +13,7 @@ using YAETWi.Helper;
 using System.Diagnostics.Eventing.Reader;
 using System.Diagnostics;
 using System.Diagnostics.Tracing;
+using System.Security.Cryptography;
 
 namespace YAETWi
 {
@@ -23,7 +24,7 @@ namespace YAETWi
         static void Main(string[] args)
         {
             Dictionary<string, string> parameters = new Dictionary<string, string>();
-            if (args.Length != 3)
+            if (args.Length != 2)
             {
                 Helper.Help.usage();
                 Environment.Exit(0);
@@ -35,21 +36,18 @@ namespace YAETWi
 
             Dictionary<int, string> eventDescriptor = new Dictionary<int, string>();
             Dictionary<int, string> opcodeDescriptor = new Dictionary<int, string>();
-            bool verbose = Convert.ToBoolean(parameters?["/verbose"] ?? "false");
+            bool verbose = false;
             
             ProviderMetadata meta = new ProviderMetadata(parameters["/provider"]);
-            if (verbose)
+            IEnumerable<EventMetadata> events = meta.Events;
+            foreach (EventMetadata m in events)
             {
-                IEnumerable<EventMetadata> events = meta.Events;
-                foreach (EventMetadata m in events)
-                {
-                    eventDescriptor[(int)m.Id] = m.Description;
-                }
-                IList<System.Diagnostics.Eventing.Reader.EventOpcode> opcodes = meta.Opcodes;
-                foreach (System.Diagnostics.Eventing.Reader.EventOpcode o in opcodes)
-                {
-                    opcodeDescriptor[o.Value] = o.DisplayName;
-                }
+                eventDescriptor[(int)m.Id] = m.Description;
+            }
+            IList<System.Diagnostics.Eventing.Reader.EventOpcode> opcodes = meta.Opcodes;
+            foreach (System.Diagnostics.Eventing.Reader.EventOpcode o in opcodes)
+            {
+                opcodeDescriptor[o.Value] = o.DisplayName;
             }
 
             var kernelSession = new TraceEventSession(KernelTraceEventParser.KernelSessionName);
@@ -107,13 +105,13 @@ namespace YAETWi
             var start = DateTime.Now;
 
             while (true)
-            {  
+            {
                 Console.CancelKeyPress += delegate (object sender, ConsoleCancelEventArgs e)
                 {
                     var end = DateTime.Now;
-                    Console.WriteLine(String.Format("[*] Session started: {0}\n[*] Session ended: {1}\n[*] Overall time: {2}\n[*] Overall external connections: {3}", 
-                        start, 
-                        end, 
+                    Console.WriteLine(String.Format("[*] Session started: {0}\n[*] Session ended: {1}\n[*] Overall time: {2}\n[*] Overall external connections: {3}",
+                        start,
+                        end,
                         end - start,
                         extConn));
                     kernelSession.Dispose();
@@ -122,25 +120,36 @@ namespace YAETWi
                 };
 
                 var cki = Console.ReadKey();
-                if (cki.Key == ConsoleKey.D)
+
+                switch (cki.Key)
                 {
-                    if (pidAggr != null)
-                    {
-                        foreach (int pid in pidAggr.Keys)
+                    case ConsoleKey.D:
+                        if (pidAggr != null)
                         {
-                            if (!verbose)
+                            foreach (int pid in pidAggr.Keys)
                             {
-                                Logger.ticker(pid, pidAggr);
-                            }
-                            else
-                            {
-                                Logger.ticker(pid, pidAggr, eventDescriptor, opcodeDescriptor);
+                                if (!verbose)
+                                    Logger.ticker(pid, pidAggr);
+                                else
+                                    Logger.ticker(pid, pidAggr, eventDescriptor, opcodeDescriptor);
                             }
                         }
-                    }
+                        break;
+                    case ConsoleKey.V:
+                        if (!verbose)
+                        {
+                            verbose = true;
+                            Console.WriteLine("[*] Enabled verbose mode");
+                        }
+                        else
+                        {
+                            verbose = false;
+                            Console.WriteLine("[*] Disabled verbose mode");
+                        }
+                        break;
                 }
-            }
 
+            }
         }
     }
 }
