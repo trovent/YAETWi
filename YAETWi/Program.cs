@@ -36,11 +36,10 @@ namespace YAETWi
             Dictionary<int, string> eventDescriptor = new Dictionary<int, string>();
             Dictionary<int, string> opcodeDescriptor = new Dictionary<int, string>();
             bool verbose = Convert.ToBoolean(parameters?["/verbose"] ?? "false");
-            Console.WriteLine("Verbose: " + verbose);
+            
+            ProviderMetadata meta = new ProviderMetadata(parameters["/provider"]);
             if (verbose)
             {
-                ProviderMetadata meta = new ProviderMetadata(parameters["/provider"]);
-                Console.WriteLine(String.Format("[*] starting custom session: {0}", meta.Name));
                 IEnumerable<EventMetadata> events = meta.Events;
                 foreach (EventMetadata m in events)
                 {
@@ -67,7 +66,7 @@ namespace YAETWi
             {
                 string dataStream = "tcpAcceptConnect";
                 Console.WriteLine(String.Format("{0}\tStream: {1}\tEvent: {2}\tOpcode: {3}", data.TimeStamp, dataStream, data.EventName, data.OpcodeName));
-                Console.WriteLine(String.Format("\t\t\tconn: {0} -> :{1}\tproc: {2} -> {3}", data.daddr, data.sport, data.ProcessID, data.ProcessName));
+                Console.WriteLine(String.Format("\t\t\tconn: {0} -> :{1}\tproc: {2} -> {3}\n", data.daddr, data.sport, data.ProcessID, data.ProcessName));
 
                 if (data.daddr.ToString() == parameters["/externalIP"])
                 {
@@ -88,6 +87,7 @@ namespace YAETWi
 
             var impacketSession = new TraceEventSession("Impacket session");
             impacketSession.EnableProvider(parameters["/provider"]);
+            Console.WriteLine(String.Format("[*] starting custom session: {0}", meta.Name));
 
             impacketSession.Source.AllEvents += ((TraceEvent data) =>
             {
