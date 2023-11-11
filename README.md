@@ -4,7 +4,7 @@ Yet Another ETW implementation;
 
 ### Description
 Imagine, you're writing your own detection rules based on the Windows log events.\
-v0.2 (see tags) allows you to trace the connections from particular IP address by protocolling their PIDs and dump all event and opcode IDs of the particular ETW provider.
+YAETWi allows you to trace the connections from particular IP address by protocolling their PIDs and dump all event and opcode IDs of the particular ETW provider.
 
 ### Examples
 - Tracing impacket/rdp_check.py execution from Kali VM:
