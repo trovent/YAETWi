@@ -95,6 +95,7 @@
     <Compile Include="Helper\ArgParser.cs" />
     <Compile Include="Helper\Help.cs" />
     <Compile Include="Helper\Logger.cs" />
+    <Compile Include="Helper\MetaProvider.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

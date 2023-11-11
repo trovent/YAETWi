@@ -11,7 +11,7 @@ namespace YAETWi.Helper
         public static void usage()
         {
             Console.WriteLine("Usage:\n\t exe /externalIP=<IP> /provider=<name>\n" +
-                "Mode:\n" +
+                "Keystrokes:\n" +
                 "\t 'v' -> switch verbose mode \n" +
                 "\t 'd' -> dump output");
         }

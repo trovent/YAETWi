@@ -14,16 +14,18 @@ using System.Diagnostics.Eventing.Reader;
 using System.Diagnostics;
 using System.Diagnostics.Tracing;
 using System.Security.Cryptography;
+using System.IO;
 
 namespace YAETWi
 {
     class Program
     {
-        private static Dictionary<int, Dictionary<string, object>> pidAggr;
+        private static Dictionary<int, Dictionary<string, object>> pidAggr = new Dictionary<int, Dictionary<string, object>>();
         private static int extConn = 0;
+        private static bool verbose = false;
+        private static Dictionary<string, string> parameters = new Dictionary<string, string>();
         static void Main(string[] args)
         {
-            Dictionary<string, string> parameters = new Dictionary<string, string>();
             if (args.Length != 2)
             {
                 Helper.Help.usage();
@@ -32,37 +34,62 @@ namespace YAETWi
             else
             {
                 parameters = Helper.ArgParser.parse(args);
+                if (parameters.ContainsKey("/verbose"))
+                    verbose = Convert.ToBoolean(parameters?["/verbose"]);
             }
 
-            Dictionary<int, string> eventDescriptor = new Dictionary<int, string>();
-            Dictionary<int, string> opcodeDescriptor = new Dictionary<int, string>();
-            bool verbose = false;
-            
-            ProviderMetadata meta = new ProviderMetadata(parameters["/provider"]);
-            IEnumerable<EventMetadata> events = meta.Events;
-            foreach (EventMetadata m in events)
-            {
-                eventDescriptor[(int)m.Id] = m.Description;
-            }
-            IList<System.Diagnostics.Eventing.Reader.EventOpcode> opcodes = meta.Opcodes;
-            foreach (System.Diagnostics.Eventing.Reader.EventOpcode o in opcodes)
-            {
-                opcodeDescriptor[o.Value] = o.DisplayName;
-            }
+            Dictionary<int, string> eventDescriptor  = MetaProvider.describeEvents(parameters["/provider"]);
+            Dictionary<int, string> opcodeDescriptor = MetaProvider.describeOpcodes(parameters["/provider"]);
 
             var kernelSession = new TraceEventSession(KernelTraceEventParser.KernelSessionName);
 
             kernelSession.EnableKernelProvider(KernelTraceEventParser.Keywords.NetworkTCPIP    |
                                                 KernelTraceEventParser.Keywords.ImageLoad      |
-                                                KernelTraceEventParser.Keywords.Handle         |
                                                 KernelTraceEventParser.Keywords.Process        |
-                                                KernelTraceEventParser.Keywords.Registry);
+                                                KernelTraceEventParser.Keywords.Registry       |
+                                                KernelTraceEventParser.Keywords.FileIO);
 
             Console.WriteLine(String.Format("[*] starting kernel session"));
 
+            kernelSession.Source.Kernel.FileIOCreate += ((FileIOCreateTraceData data) =>
+            {
+                if (pidAggr.ContainsKey(data.ProcessID))
+                {
+                    Logger.logKernel(Logger.KernelLogger.kernelFileIOCreate.ToString(), pidAggr, data);
+                    Console.WriteLine(String.Format("\t\t\tfile: {0}\n", data.FileName));
+                }
+            });
+
+            kernelSession.Source.Kernel.ProcessStart += ((ProcessTraceData data) =>
+            {
+                if (pidAggr.ContainsKey(data.ProcessID))
+                {
+                    Logger.logKernel(Logger.KernelLogger.kernelFileIOCreate.ToString(), pidAggr, data);
+                    Console.WriteLine(String.Format("\t\t\timageFile: {0}\tkernelImageFile: {1}\n", data.ImageFileName, data.KernelImageFileName));
+                }
+            });
+
+            kernelSession.Source.Kernel.ImageLoad += ((ImageLoadTraceData data) =>
+            {
+                if (pidAggr.ContainsKey(data.ProcessID))
+                {
+                    Logger.logKernel(Logger.KernelLogger.kernelImageLoad.ToString(), pidAggr, data);
+                    Console.WriteLine(String.Format("\t\t\tdll: {0}\n", data.FileName));
+                }
+            });
+
+            kernelSession.Source.Kernel.RegistrySetValue += ((RegistryTraceData data) =>
+            {
+                if (pidAggr.ContainsKey(data.ProcessID))
+                {
+                    Logger.logKernel(Logger.KernelLogger.kernelRegistry.ToString(), pidAggr, data);
+                    Console.WriteLine(String.Format("\t\t\tregistry: {0}:{1}\n", data.KeyName, data.ValueName));
+                }
+            });
+
             kernelSession.Source.Kernel.TcpIpAccept += ((TcpIpConnectTraceData data) =>
             {
-                string dataStream = "tcpAcceptConnect";
+                string dataStream = "kernelTcpIpAccept";
                 Console.WriteLine(String.Format("{0}\tStream: {1}\tEvent: {2}\tOpcode: {3}", data.TimeStamp, dataStream, data.EventName, data.OpcodeName));
                 Console.WriteLine(String.Format("\t\t\tconn: {0} -> :{1}\tproc: {2} -> {3}\n", data.daddr, data.sport, data.ProcessID, data.ProcessName));
 
@@ -83,11 +110,11 @@ namespace YAETWi
 
             Task.Run(() => kernelSession.Source.Process());
 
-            var impacketSession = new TraceEventSession("Impacket session");
-            impacketSession.EnableProvider(parameters["/provider"]);
-            Console.WriteLine(String.Format("[*] starting custom session: {0}", meta.Name));
+            var customSession = new TraceEventSession("custom session");
+            customSession.EnableProvider(parameters["/provider"]);
+            Console.WriteLine(String.Format("[*] starting custom session: {0}", new ProviderMetadata(parameters["/provider"]).Name));
 
-            impacketSession.Source.AllEvents += ((TraceEvent data) =>
+            customSession.Source.AllEvents += ((TraceEvent data) =>
             {
                 /* check all events, otherwise check on condition: (data.ProviderGuid.ToString().Equals("1139c61b-b549-4251-8ed3-27250a1edec8")) */
                 if (pidAggr.ContainsKey(data.ProcessID))
@@ -100,7 +127,7 @@ namespace YAETWi
                 }
             });
 
-            Task.Run(() => impacketSession.Source.Process());
+            Task.Run(() => customSession.Source.Process());
 
             var start = DateTime.Now;
 
@@ -115,7 +142,7 @@ namespace YAETWi
                         end - start,
                         extConn));
                     kernelSession.Dispose();
-                    impacketSession.Dispose();
+                    customSession.Dispose();
                     Environment.Exit(0);
                 };
 

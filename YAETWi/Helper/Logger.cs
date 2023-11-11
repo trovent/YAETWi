@@ -26,6 +26,19 @@ namespace YAETWi.Helper
             OpcodeID
         }
 
+        public enum KernelLogger
+        {
+            kernelFileIOCreate,
+            kernelProcess,
+            kernelImageLoad,
+            kernelRegistry
+        }
+
+        public static void logKernel(string dataStream, Dictionary<int, Dictionary<string, object>> pidAggr, TraceEvent data)
+        {
+            Console.WriteLine(String.Format("{0}\tStream: {1}\tEvent: {2}\tOpcode: {3}", data.TimeStamp, dataStream, data.EventName, data.OpcodeName));
+        }
+
         private static string listStringifier(List<int> list, String occurrence)
         {
             var count = list.Count();
