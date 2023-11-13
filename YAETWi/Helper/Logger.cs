@@ -31,10 +31,11 @@ namespace YAETWi.Helper
             kernelFileIOCreate,
             kernelProcess,
             kernelImageLoad,
-            kernelRegistry
+            kernelRegistry,
+            kernelTcpIPAccept
         }
 
-        public static void logKernel(string dataStream, Dictionary<int, Dictionary<string, object>> pidAggr, TraceEvent data)
+        public static void logKernel(string dataStream, TraceEvent data)
         {
             Console.WriteLine(String.Format("{0}\tStream: {1}\tEvent: {2}\tOpcode: {3}", data.TimeStamp, dataStream, data.EventName, data.OpcodeName));
         }

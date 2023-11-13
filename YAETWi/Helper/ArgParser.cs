@@ -18,7 +18,7 @@ namespace YAETWi.Helper
                 string[] split = arg.Split('=');
                 parameters[split[0]] = split[1];
             }
-            if (!parameters.ContainsKey("/provider") || !parameters.ContainsKey("/externalIP"))
+            if (!parameters.ContainsKey("/externalIP"))
             {
                 Helper.Help.usage();
                 Environment.Exit(0);
