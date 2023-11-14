@@ -37,7 +37,11 @@ namespace YAETWi.Helper
 
         public static void logKernel(string dataStream, TraceEvent data)
         {
-            Console.WriteLine(String.Format("{0}\tStream: {1}\tEvent: {2}\tOpcode: {3}", data.TimeStamp, dataStream, data.EventName, data.OpcodeName));
+            Console.WriteLine(String.Format("{0}\tPID: {1} Stream: {2}\tEvent: {3}\tOpcode: {4}", data.TimeStamp, 
+                data.ProcessID, 
+                dataStream, 
+                data.EventName, 
+                data.OpcodeName));
         }
 
         private static string listStringifier(List<int> list, String occurrence)

@@ -14,20 +14,11 @@ namespace YAETWi
 {
     class Program
     {
-        private static Dictionary<int, Dictionary<string, object>> pidAggr = new Dictionary<int, Dictionary<string, object>>();
         private static Dictionary<string, string> parameters = new Dictionary<string, string>();
         private static int extConn = 0;
         private static bool verbose = false;
-        private static string externalIP;
-        private static string provider = null;
-        private static void registryDataStream(RegistryTraceData data)
-        {
-            if (pidAggr.ContainsKey(data.ProcessID))
-            {
-                Logger.logKernel(Logger.KernelLogger.kernelRegistry.ToString(), data);
-                Console.WriteLine(String.Format("\t\t\tregistry: {0}:{1}\n", data.KeyName, data.ValueName));
-            }
-        }
+        private static bool kernel = false;
+
         static void Main(string[] args)
         {
             if (args.Length == 0)
@@ -38,77 +29,40 @@ namespace YAETWi
             else
             {
                 parameters = Helper.ArgParser.parse(args);
-                if (!parameters.ContainsKey("/externalIP"))
+                if (!parameters.ContainsKey(ArgParser.Parameters.externalIP.ToString()))
                 {
                     Helper.Help.usage();
                     Environment.Exit(0);
                 }
-                else
-                    externalIP = parameters["/externalIP"];
 
-                if (parameters.ContainsKey("/verbose"))
-                    verbose = Convert.ToBoolean(parameters?["/verbose"]);
-                if (parameters.ContainsKey("/provider"))
-                    provider = parameters["/provider"];
+                if (parameters.ContainsKey(ArgParser.Parameters.verbose.ToString()))
+                    verbose = true;
+                if (parameters.ContainsKey(ArgParser.Parameters.kernel.ToString()))
+                    kernel = true;
             }
 
             Dictionary<int, string> eventDescriptor  = new Dictionary<int, string>();
             Dictionary<int, string> opcodeDescriptor = new Dictionary<int, string>();
 
-            if (provider != null)
+            if (parameters.ContainsKey(ArgParser.Parameters.provider.ToString()))
             {
-                eventDescriptor = MetaProvider.describeEvents(provider);
-                opcodeDescriptor = MetaProvider.describeOpcodes(provider);
+                eventDescriptor = ETW.describeEvents(parameters[ArgParser.Parameters.provider.ToString()]);
+                opcodeDescriptor = ETW.describeOpcodes(parameters[ArgParser.Parameters.provider.ToString()]);
             }
 
-            var kernelSession = new TraceEventSession(KernelTraceEventParser.KernelSessionName);
-
-            kernelSession.EnableKernelProvider(KernelTraceEventParser.Keywords.NetworkTCPIP    |
-                                                KernelTraceEventParser.Keywords.ImageLoad      |
-                                                KernelTraceEventParser.Keywords.Process        |
-                                                KernelTraceEventParser.Keywords.Registry       |
-                                                KernelTraceEventParser.Keywords.FileIO);
-
+            var tcpipKernelSession = new TraceEventSession(KernelTraceEventParser.KernelSessionName);
+            tcpipKernelSession.EnableKernelProvider(KernelTraceEventParser.Keywords.NetworkTCPIP);
             Console.WriteLine(String.Format("[*] starting kernel session"));
 
-            kernelSession.Source.Kernel.RegistrySetValue += registryDataStream;
-
-            kernelSession.Source.Kernel.FileIOCreate += ((FileIOCreateTraceData data) =>
-            {
-                if (pidAggr.ContainsKey(data.ProcessID))
-                {
-                    Logger.logKernel(Logger.KernelLogger.kernelFileIOCreate.ToString(), data);
-                    Console.WriteLine(String.Format("\t\t\tfile: {0}\n", data.FileName));
-                }
-            });
-
-            kernelSession.Source.Kernel.ProcessStart += ((ProcessTraceData data) =>
-            {
-                if (pidAggr.ContainsKey(data.ProcessID))
-                {
-                    Logger.logKernel(Logger.KernelLogger.kernelFileIOCreate.ToString(), data);
-                    Console.WriteLine(String.Format("\t\t\timageFile: {0}\tkernelImageFile: {1}\n", data.ImageFileName, data.KernelImageFileName));
-                }
-            });
-
-            kernelSession.Source.Kernel.ImageLoad += ((ImageLoadTraceData data) =>
-            {
-                if (pidAggr.ContainsKey(data.ProcessID))
-                {
-                    Logger.logKernel(Logger.KernelLogger.kernelImageLoad.ToString(), data);
-                    Console.WriteLine(String.Format("\t\t\tdll: {0}\n", data.FileName));
-                }
-            });
-
-            kernelSession.Source.Kernel.TcpIpAccept += ((TcpIpConnectTraceData data) =>
+            tcpipKernelSession.Source.Kernel.TcpIpAccept += ((TcpIpConnectTraceData data) =>
             {
                 Logger.logKernel(Logger.KernelLogger.kernelTcpIPAccept.ToString(), data);
                 Console.WriteLine(String.Format("\t\t\tconn: {0} -> :{1}\tproc: {2} -> {3}\n", data.daddr, data.sport, data.ProcessID, data.ProcessName));
 
-                if (data.daddr.ToString() == externalIP)
+                if (data.daddr.ToString() == parameters[ArgParser.Parameters.externalIP.ToString()])
                 {
                     extConn++;
-                    pidAggr = new Dictionary<int, Dictionary<string, object>>();
+                    ETW.pidAggr = new Dictionary<int, Dictionary<string, object>>();
                     /* clear on every event, otherwise check on condition (!pidAggregator.ContainsKey(data.ProcessID)) */
                     var dict = new Dictionary<string, object>();
                     dict[Logger.Log.timestamp.ToString()] = new Nullable<DateTime>();
@@ -116,26 +70,29 @@ namespace YAETWi
                     dict[Logger.Log.providerId.ToString()] = new Nullable<System.Guid>();
                     dict[Logger.Log.eventId.ToString()] = new List<int>();
                     dict[Logger.Log.opcodeId.ToString()] = new List<int>();
-                    pidAggr.Add(data.ProcessID, dict);
+                    ETW.pidAggr.Add(data.ProcessID, dict);
                 }
             });
+            Task.Run(() => tcpipKernelSession.Source.Process());
 
-            Task.Run(() => kernelSession.Source.Process());
+            TraceEventSession enhancedKernelSession = null;
+            ETW.traceKernel(enhancedKernelSession, kernel);
 
             TraceEventSession customSession = null;
 
-            if (provider != null)
+            if (parameters.ContainsKey(ArgParser.Parameters.provider.ToString()))
             {
                 customSession = new TraceEventSession("custom session");
-                customSession.EnableProvider(provider);
-                Console.WriteLine(String.Format("[*] starting custom session: {0}", new ProviderMetadata(provider).Name));
+                customSession.EnableProvider(parameters[ArgParser.Parameters.provider.ToString()]);
+                Console.WriteLine(String.Format("[*] starting custom session: {0}", 
+                    new ProviderMetadata(parameters[ArgParser.Parameters.provider.ToString()]).Name));
 
                 customSession.Source.AllEvents += ((TraceEvent data) =>
                 {
                     /* check all events, otherwise check on condition: (data.ProviderGuid.ToString().Equals("1139c61b-b549-4251-8ed3-27250a1edec8")) */
-                    if (pidAggr.ContainsKey(data.ProcessID))
+                    if (ETW.pidAggr.ContainsKey(data.ProcessID))
                     {
-                        Dictionary<string, object> dict = pidAggr[data.ProcessID];
+                        Dictionary<string, object> dict = ETW.pidAggr[data.ProcessID];
                         dict[Logger.Log.timestamp.ToString()]   = data.TimeStamp;
                         dict[Logger.Log.providerId.ToString()]  = data.ProviderGuid;
                         ((List<int>)dict[Logger.Log.eventId.ToString()]).Add(UInt16.Parse(data.EventName.Split('(', ')')[1]));
@@ -158,9 +115,11 @@ namespace YAETWi
                         end,
                         end - start,
                         extConn));
-                    kernelSession.Dispose();
+                    tcpipKernelSession.Dispose();
                     if (customSession != null)
                         customSession.Dispose();
+                    if (enhancedKernelSession != null)
+                        enhancedKernelSession.Dispose();
                     Environment.Exit(0);
                 };
 
@@ -169,22 +128,26 @@ namespace YAETWi
                 switch (cki.Key)
                 {
                     case ConsoleKey.D:
-                        if (provider != null)
+                        if (parameters.ContainsKey(ArgParser.Parameters.provider.ToString()))
                         {
-                            if (pidAggr != null)
+                            if (ETW.pidAggr != null)
                             {
-                                foreach (int pid in pidAggr.Keys)
+                                foreach (int pid in ETW.pidAggr.Keys)
                                 {
                                     if (!verbose)
                                     {
-                                        Logger.ticker(pid, pidAggr);
+                                        Logger.ticker(pid, ETW.pidAggr);
                                     }
                                     else
                                     {
                                             Logger.ticker(pid, 
-                                                pidAggr, 
+                                                ETW.pidAggr, 
                                                 eventDescriptor, 
                                                 opcodeDescriptor);
+                                    }
+                                    if (kernel)
+                                    {
+                                        ETW.dumpKernelEvents();
                                     }
                                 }
                             }
@@ -206,8 +169,21 @@ namespace YAETWi
                             Console.WriteLine("[*] Disabled verbose mode");
                         }
                         break;
+                    case ConsoleKey.K:
+                        if (!kernel)
+                        {
+                            kernel = true;
+                            Console.WriteLine("[*] Enabled enhanced kernel logging");
+                            ETW.traceKernel(enhancedKernelSession, kernel);
+                        }
+                        else
+                        {
+                            kernel = false;
+                            Console.WriteLine("[*] Disabled enhanced kernel logging");
+                            ETW.traceKernel(enhancedKernelSession, kernel);
+                        }
+                        break;
                 }
-
             }
         }
     }

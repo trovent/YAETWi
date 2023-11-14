@@ -10,18 +10,29 @@ namespace YAETWi.Helper
 {
     public static class ArgParser
     {
+        public enum Parameters
+        { 
+            externalIP,
+            provider,
+            verbose,
+            kernel
+        }
+
         public static Dictionary<string, string> parse(string[] args)
         {
             Dictionary<string, string> parameters = new Dictionary<string, string>();
             foreach(var arg in args)
             {
                 string[] split = arg.Split('=');
-                parameters[split[0]] = split[1];
-            }
-            if (!parameters.ContainsKey("/externalIP"))
-            {
-                Helper.Help.usage();
-                Environment.Exit(0);
+                var r = split[0].Replace("/", string.Empty);
+                if (split.Length == 1)
+                {
+                    parameters[r] = "true";
+                }
+                if (split.Length == 2)
+                {
+                    parameters[r] = split[1];
+                }
             }
             return parameters;
         }

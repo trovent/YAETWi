@@ -52,7 +52,7 @@
     <Optimize>true</Optimize>
     <DebugType>pdbonly</DebugType>
     <PlatformTarget>x64</PlatformTarget>
-    <LangVersion>8.0</LangVersion>
+    <LangVersion>11.0</LangVersion>
     <ErrorReport>prompt</ErrorReport>
     <Prefer32Bit>true</Prefer32Bit>
   </PropertyGroup>
@@ -94,9 +94,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Helper\ArgParser.cs" />
+    <Compile Include="Helper\ETW.cs" />
     <Compile Include="Helper\Help.cs" />
     <Compile Include="Helper\Logger.cs" />
-    <Compile Include="Helper\MetaProvider.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
