@@ -14,10 +14,14 @@ YAETWi allows you to trace the connections from particular IP address by protoco
 
 ### MAN pages
 ```
-.\YAETWi.exe 
-	/externalIP=<IP, the connection to be monitored from> 
-	/provider=<ETW Provider by name> 
-	/verbose=<true -> resolve description, if provided, for Event and Opcode nummerical IDs>
-
-To dump event and opcode IDs -> enter 'd' while program execution;
+Usage:
+         .\YAETWi.exe
+		/externalIP=<IP>	<- IP address the connections to be protocolled from
+	     	[/provider=<name>]  	<- if not provided, only kernel logs available
+		[/kernel]		<- enable kernel tracing (can be toggled via keystrokes while process execution)
+		[/verbose]		<- enable more verbose output (can be toggled via keystrokes while process execution)
+Keystrokes:
+         'v' -> switch verbose mode
+	 'k' -> enable/disable kernel logging
+         'd' -> dump output
 ```
