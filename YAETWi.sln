@@ -5,6 +5,8 @@ VisualStudioVersion = 17.7.34003.232
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "YAETWi", "YAETWi\YAETWi.csproj", "{76CAEB69-4EE8-4C1D-BDE1-99EA06663E7F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "YAETWix", "YAETWix\YAETWix.csproj", "{EEEB8386-CED5-49F6-BDC3-A7F597864594}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,14 @@ Global
 		{76CAEB69-4EE8-4C1D-BDE1-99EA06663E7F}.Release|Any CPU.Build.0 = Release|Any CPU
 		{76CAEB69-4EE8-4C1D-BDE1-99EA06663E7F}.Release|x64.ActiveCfg = Release|x64
 		{76CAEB69-4EE8-4C1D-BDE1-99EA06663E7F}.Release|x64.Build.0 = Release|x64
+		{EEEB8386-CED5-49F6-BDC3-A7F597864594}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EEEB8386-CED5-49F6-BDC3-A7F597864594}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EEEB8386-CED5-49F6-BDC3-A7F597864594}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{EEEB8386-CED5-49F6-BDC3-A7F597864594}.Debug|x64.Build.0 = Debug|Any CPU
+		{EEEB8386-CED5-49F6-BDC3-A7F597864594}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EEEB8386-CED5-49F6-BDC3-A7F597864594}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EEEB8386-CED5-49F6-BDC3-A7F597864594}.Release|x64.ActiveCfg = Release|x64
+		{EEEB8386-CED5-49F6-BDC3-A7F597864594}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

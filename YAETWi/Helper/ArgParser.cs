@@ -12,6 +12,7 @@ namespace YAETWi.Helper
     {
         public enum Parameters
         { 
+            pid,
             externalIP,
             provider,
             verbose,

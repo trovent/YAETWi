@@ -8,6 +8,7 @@ using Microsoft.Diagnostics.Tracing.Parsers.Kernel;
 using Microsoft.Diagnostics.Tracing.Session;
 
 using YAETWi.Helper;
+using System.Diagnostics;
 using System.Diagnostics.Eventing.Reader;
 
 namespace YAETWi
@@ -29,7 +30,8 @@ namespace YAETWi
             else
             {
                 parameters = Helper.ArgParser.parse(args);
-                if (!parameters.ContainsKey(ArgParser.Parameters.externalIP.ToString()))
+                if (!parameters.ContainsKey(ArgParser.Parameters.externalIP.ToString()) ||
+                        !parameters.ContainsKey(ArgParser.Parameters.pid.ToString()))
                 {
                     Helper.Help.usage();
                     Environment.Exit(0);
