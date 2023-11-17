@@ -35,12 +35,14 @@ namespace YAETWi.Helper
             kernelTcpIPAccept
         }
 
-        public static void logKernel(string dataStream, TraceEvent data)
+        public static void logKernel(TraceEvent data)
         {
-            Console.WriteLine(String.Format("{0}\tPID: {1} Stream: {2}\tEvent: {3}\tOpcode: {4}", data.TimeStamp, 
+            Console.WriteLine(String.Format("{0}\tPID: {1}\n\t[*] Stream: {2}\n\t[*] Event: {3}\n\t[*] Opcode: {4} -> {5}", 
+                data.TimeStamp, 
                 data.ProcessID, 
-                dataStream, 
-                data.EventName, 
+                data.GetType(), 
+                data.EventName,
+                (int)data.Opcode,
                 data.OpcodeName));
         }
 

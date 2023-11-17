@@ -22,7 +22,7 @@ namespace YAETWi.Helper
         public static Dictionary<string, string> parse(string[] args)
         {
             Dictionary<string, string> parameters = new Dictionary<string, string>();
-            foreach(var arg in args)
+            foreach (var arg in args)
             {
                 string[] split = arg.Split('=');
                 var r = split[0].Replace("/", string.Empty);

@@ -47,7 +47,7 @@ namespace YAETWi.Helper
         {
             if (pidAggr.ContainsKey(data.ProcessID))
             {
-                Logger.logKernel(Logger.KernelLogger.kernelRegistry.ToString(), data);
+                Logger.logKernel(data);
                 Console.WriteLine(String.Format("\t\t\t: {0}\tregistry: {1}:{2}\n", data.ProcessID, data.KeyName, data.ValueName));
             }
         }
@@ -56,15 +56,16 @@ namespace YAETWi.Helper
         {
             if (kernelEvents != null)
             {
-                Console.WriteLine(String.Format("Kernel Events (unique): \n[*] {0}\n", String.Join("\n[*] ", kernelEvents.Distinct().ToArray())));
+                Console.WriteLine(String.Format("Kernel Events (unique): \n[*] {0}:{1\n", String.Join("\n[*] ", 
+                    kernelEvents.Distinct().ToArray())));
             }
         }
 
-        public static void traceKernel(TraceEventSession kernelSession, bool kernel)
+        public static void traceKernel(TraceEventSession kernelSession)
         {
             kernelSession = new TraceEventSession("enhanced kernel session");
             kernelEvents = new List<string>();
-            if (kernel)
+            if (Program.kernel)
             {
                 Console.WriteLine("[*] starting enhanced kernel logging");
                 kernelSession.EnableKernelProvider(KernelTraceEventParser.Keywords.All);
@@ -73,6 +74,10 @@ namespace YAETWi.Helper
                     if (pidAggr.ContainsKey(data.ProcessID))
                     {
                         kernelEvents.Add(data.EventName);
+                        if (Program.verbose)
+                        { 
+                            traceKernelEvents(data);
+                        }
                     }
                 });
                 Task.Run(() => kernelSession.Source.Process());
@@ -83,36 +88,360 @@ namespace YAETWi.Helper
                 kernelSession.Dispose();
             }
         }
-        public static void traceKernelEvents(TraceEventSession kernelSession)
+        private static void traceKernelEvents(TraceEvent data)
         {
-            kernelSession.Source.Kernel.RegistrySetValue += registryDataStream;
-
-            kernelSession.Source.Kernel.FileIOCreate += ((FileIOCreateTraceData data) =>
+            if (data is ALPCReceiveMessageTraceData)
             {
-                if (pidAggr.ContainsKey(data.ProcessID))
-                {
-                    Logger.logKernel(Logger.KernelLogger.kernelFileIOCreate.ToString(), data);
-                    Console.WriteLine(String.Format("\t\t\tfile: {0}\n", data.FileName));
-                }
-            });
-
-            kernelSession.Source.Kernel.ProcessStart += ((ProcessTraceData data) =>
+                Logger.logKernel(data);
+            } 
+            else if (data is ALPCSendMessageTraceData)
             {
-                if (pidAggr.ContainsKey(data.ProcessID))
-                {
-                    Logger.logKernel(Logger.KernelLogger.kernelFileIOCreate.ToString(), data);
-                    Console.WriteLine(String.Format("\t\t\timageFile: {0}\tkernelImageFile: {1}\n", data.ImageFileName, data.KernelImageFileName));
-                }
-            });
-
-            kernelSession.Source.Kernel.ImageLoad += ((ImageLoadTraceData data) =>
+                Logger.logKernel(data);
+            } 
+            else if (data is ALPCUnwaitTraceData)
             {
-                if (pidAggr.ContainsKey(data.ProcessID))
-                {
-                    Logger.logKernel(Logger.KernelLogger.kernelImageLoad.ToString(), data);
-                    Console.WriteLine(String.Format("\t\t\tdll: {0}\n", data.FileName));
-                }
-            });
+                Logger.logKernel(data);
+            }
+            else if (data is ALPCWaitForNewMessageTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is ALPCWaitForReplyTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is BuildInfoTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is CSwitchTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is DequeueTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is DiskIOFlushBuffersTraceData)
+            {
+                Logger.logKernel(data);
+            } 
+            else if (data is DiskIOInitTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is DiskIOTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is DispatcherReadyThreadTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is DPCTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is DriverCompleteRequestReturnTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is DriverCompleteRequestTraceData)
+            {
+                Logger.logKernel(data);
+            } 
+            else if (data is DriverCompletionRoutineTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is DriverMajorFunctionCallTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is DriverMajorFunctionReturnTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is EmptyTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is EnqueueTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is EventTraceHeaderTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is FileIOCreateTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is FileIODirEnumTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is FileIOInfoTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is FileIONameTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is FileIOOpEndTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is FileIOReadWriteTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is FileIOSimpleOpTraceData)
+            {
+                Logger.logKernel(data);
+            } 
+            else if (data is HeaderExtensionTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is ImageLoadTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is ISRTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is LastBranchRecordTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is MapFileTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is MemInfoTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is MemoryHardFaultTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is MemoryHeapRangeCreateTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is MemoryHeapRangeDestroyTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is MemoryHeapRangeRundownTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is MemoryHeapRangeTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is MemoryImageLoadBackedTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is MemoryPageAccessTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is MemoryPageFaultTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is MemoryProcessMemInfoTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is MemorySystemMemInfoTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is ObjectDuplicateHandleTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is ObjectHandleTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is ObjectNameTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is ObjectTypeNameTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is PMCCounterProfTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is ProcessCtrTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is ProcessTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is RegistryTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is SampledProfileIntervalTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is SampledProfileTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is SplitIoInfoTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is StackWalkDefTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is StackWalkRefTraceData)
+            {
+                Logger.logKernel(data);
+            } 
+            else if (data is StackWalkStackTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is StringTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is SysCallEnterTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is SysCallExitTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is SystemConfigCPUTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is SystemConfigIDEChannelTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is SystemConfigIRQTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is SystemConfigLogDiskTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is SystemConfigNetworkTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is SystemConfigNICTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is SystemConfigPhyDiskTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is SystemConfigPnPTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is SystemConfigPowerTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is SystemConfigServicesTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is SystemConfigVideoTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is SystemPathsTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is TcpIpConnectTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is TcpIpFailTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is TcpIpSendTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is TcpIpTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is TcpIpV6ConnectTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is TcpIpV6SendTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is TcpIpV6TraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is ThreadSetNameTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is ThreadTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is UdpIpFailTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is UdpIpTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is UpdIpV6TraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is VirtualAllocTraceData )
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is VolumeMappingTraceData)
+            {
+                Logger.logKernel(data);
+            }
+            else
+            {
+                Console.WriteLine(String.Format("Unknown TraceData type: {0}", data.GetType()));
+            }
         }
     }
 }

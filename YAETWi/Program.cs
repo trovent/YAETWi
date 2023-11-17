@@ -17,8 +17,8 @@ namespace YAETWi
     {
         private static Dictionary<string, string> parameters = new Dictionary<string, string>();
         private static int extConn = 0;
-        private static bool verbose = false;
-        private static bool kernel = false;
+        public static bool verbose = false;
+        public static bool kernel = false;
 
         static void Main(string[] args)
         {
@@ -30,8 +30,8 @@ namespace YAETWi
             else
             {
                 parameters = Helper.ArgParser.parse(args);
-                if (!parameters.ContainsKey(ArgParser.Parameters.externalIP.ToString()) ||
-                        !parameters.ContainsKey(ArgParser.Parameters.pid.ToString()))
+                if (!(parameters.ContainsKey(ArgParser.Parameters.externalIP.ToString()) || 
+                    parameters.ContainsKey(ArgParser.Parameters.pid.ToString())))
                 {
                     Helper.Help.usage();
                     Environment.Exit(0);
@@ -58,8 +58,8 @@ namespace YAETWi
 
             tcpipKernelSession.Source.Kernel.TcpIpAccept += ((TcpIpConnectTraceData data) =>
             {
-                Logger.logKernel(Logger.KernelLogger.kernelTcpIPAccept.ToString(), data);
-                Console.WriteLine(String.Format("\t\t\tconn: {0} -> :{1}\tproc: {2} -> {3}\n", data.daddr, data.sport, data.ProcessID, data.ProcessName));
+                Logger.logKernel(data);
+                Console.WriteLine(String.Format("\n\t[!] conn: {0} -> :{1}\tproc: {2} -> {3}\n", data.daddr, data.sport, data.ProcessID, data.ProcessName));
 
                 if (data.daddr.ToString() == parameters[ArgParser.Parameters.externalIP.ToString()])
                 {
@@ -78,7 +78,7 @@ namespace YAETWi
             Task.Run(() => tcpipKernelSession.Source.Process());
 
             TraceEventSession enhancedKernelSession = null;
-            ETW.traceKernel(enhancedKernelSession, kernel);
+            ETW.traceKernel(enhancedKernelSession);
 
             TraceEventSession customSession = null;
 
@@ -176,13 +176,13 @@ namespace YAETWi
                         {
                             kernel = true;
                             Console.WriteLine("[*] Enabled enhanced kernel logging");
-                            ETW.traceKernel(enhancedKernelSession, kernel);
+                            ETW.traceKernel(enhancedKernelSession);
                         }
                         else
                         {
                             kernel = false;
                             Console.WriteLine("[*] Disabled enhanced kernel logging");
-                            ETW.traceKernel(enhancedKernelSession, kernel);
+                            ETW.traceKernel(enhancedKernelSession);
                         }
                         break;
                 }
