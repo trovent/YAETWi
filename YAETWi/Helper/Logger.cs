@@ -22,8 +22,8 @@ namespace YAETWi.Helper
 
         private enum Occurrence
         {
-            EventID,
-            OpcodeID
+            EventIDs,
+            OpcodeIDs
         }
 
         public enum KernelLogger
@@ -35,9 +35,19 @@ namespace YAETWi.Helper
             kernelTcpIPAccept
         }
 
+        public static void printSeparatorStart()
+        {
+            Console.Write("\n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
+        }
+
+        public static void printSeparatorEnd()
+        {
+            Console.Write("\n<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n");
+        }
+
         public static void logKernel(TraceEvent data)
         {
-            Console.WriteLine(String.Format("{0}\tPID: {1}\n\t[*] Stream: {2}\n\t[*] Event: {3}\n\t[*] Opcode: {4} -> {5}", 
+            Console.WriteLine(String.Format("\n{0}\tPID: {1}\n\t[*] Stream: {2}\n\t[*] Event: {3}\n\t[*] Opcode: {4} -> {5}", 
                 data.TimeStamp, 
                 data.ProcessID, 
                 data.GetType(), 
@@ -49,7 +59,7 @@ namespace YAETWi.Helper
         private static string listStringifier(List<int> list, String occurrence)
         {
             var count = list.Count();
-            StringBuilder sb = new StringBuilder(String.Format("{0}: ", occurrence));
+            StringBuilder sb = new StringBuilder(String.Format("\n{0}: ", occurrence));
             foreach (int s in list)
             {
                 count--;
@@ -59,10 +69,9 @@ namespace YAETWi.Helper
                 }
                 else
                 {
-                    sb.Append(String.Format(" {0}\n", s));
+                    sb.Append(String.Format(" {0}", s));
                 }
             }
-            sb.AppendLine("**************************************************");
             return sb.ToString();
         }
 
@@ -72,11 +81,11 @@ namespace YAETWi.Helper
             String occurrence)
         {
             List<int> occurs;
-            if (occurrence.Equals(Occurrence.EventID.ToString()))
+            if (occurrence.Equals(Occurrence.EventIDs.ToString()))
             {
                 occurs = (List<int>)pidAggregator[pid][Logger.Log.eventId.ToString()];
             }
-            else if (occurrence.Equals(Occurrence.OpcodeID.ToString()))
+            else if (occurrence.Equals(Occurrence.OpcodeIDs.ToString()))
             {
                 occurs = (List<int>)pidAggregator[pid][Logger.Log.opcodeId.ToString()];
             }
@@ -96,19 +105,19 @@ namespace YAETWi.Helper
                     sb.AppendLine(String.Format("{0}: {1} -> ", occurrence, id));
                 }
             }
-            sb.AppendLine("**************************************************");
             return sb.ToString();
         }
 
         public static void ticker(int pid, Dictionary<int, Dictionary<string, object>> pidAggregator)
         {
-            Console.WriteLine(String.Format("{0} pid: {1} -> {2}, providerId: {3}\n{4}\n{5}\n",
+            Nullable<System.Guid> guid = (Nullable<System.Guid>)pidAggregator?[pid][Logger.Log.providerId.ToString()];
+            Console.WriteLine(String.Format("\n{0} pid: {1} -> {2}; providerId: <{3}>\n\n{4}\n{5}\n",
             pidAggregator[pid][Logger.Log.timestamp.ToString()],
             pid,
             pidAggregator[pid][Logger.Log.process.ToString()],
-            ((Nullable<System.Guid>)pidAggregator[pid][Logger.Log.providerId.ToString()]).ToString() ?? "",
-            listStringifier((List<int>)pidAggregator[pid][Logger.Log.eventId.ToString()],  Occurrence.EventID.ToString()),
-            listStringifier((List<int>)pidAggregator[pid][Logger.Log.opcodeId.ToString()], Occurrence.OpcodeID.ToString())
+            guid?.ToString() ?? "should be specified via /provider=",
+            listStringifier((List<int>)pidAggregator[pid][Logger.Log.eventId.ToString()],  Occurrence.EventIDs.ToString()),
+            listStringifier((List<int>)pidAggregator[pid][Logger.Log.opcodeId.ToString()], Occurrence.OpcodeIDs.ToString())
             ));
         }
         public static void ticker(int pid, 
@@ -116,13 +125,14 @@ namespace YAETWi.Helper
             Dictionary<int, string> eventDescriptor, 
             Dictionary<int, string> opcodeDescriptor)
         {
-            Console.WriteLine(String.Format("{0} pid: {1} -> {2}, providerId: {3}\n{4}\n{5}\n",
+            Nullable<System.Guid> guid = (Nullable<System.Guid>)pidAggregator?[pid][Logger.Log.providerId.ToString()];
+            Console.WriteLine(String.Format("\n{0} pid: {1} -> {2}; providerId: <{3}>\n\n{4}\n{5}\n",
             pidAggregator[pid][Logger.Log.timestamp.ToString()],
             pid,
             pidAggregator[pid][Logger.Log.process.ToString()],
-            ((Nullable<System.Guid>)pidAggregator[pid][Logger.Log.providerId.ToString()]).ToString() ?? "",
-            listAggregator(pid, pidAggregator, eventDescriptor,  Occurrence.EventID.ToString()),
-            listAggregator(pid, pidAggregator, opcodeDescriptor, Occurrence.OpcodeID.ToString())
+            guid?.ToString() ?? "should be specified via /provider=",
+            listAggregator(pid, pidAggregator, eventDescriptor,  Occurrence.EventIDs.ToString()),
+            listAggregator(pid, pidAggregator, opcodeDescriptor, Occurrence.OpcodeIDs.ToString())
             ));
         }
     }

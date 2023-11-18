@@ -17,7 +17,7 @@ namespace YAETWi.Helper
     {
 
         public static Dictionary<int, Dictionary<string, object>> pidAggr = new Dictionary<int, Dictionary<string, object>>();
-        private static List<string> kernelEvents;
+        private static Dictionary<int, List<string>> kernelEvents = new Dictionary<int, List<string>>();
 
         public static Dictionary<int, string> describeEvents(string provider)
         {
@@ -52,19 +52,21 @@ namespace YAETWi.Helper
             }
         }
 
-        public static void dumpKernelEvents()
+        public static void dumpKernelEvents(int pid)
         {
-            if (kernelEvents != null)
+            if (kernelEvents.ContainsKey(pid))
             {
-                Console.WriteLine(String.Format("Kernel Events (unique): \n[*] {0}:{1\n", String.Join("\n[*] ", 
-                    kernelEvents.Distinct().ToArray())));
+                if (kernelEvents[pid].Count() != 0)
+                {
+                    Console.WriteLine(String.Format("Kernel Events (unique): \n[*] {0}\n", String.Join("\n[*] ",
+                        kernelEvents[pid].Distinct().ToArray())));
+                }
             }
         }
 
         public static void traceKernel(TraceEventSession kernelSession)
         {
             kernelSession = new TraceEventSession("enhanced kernel session");
-            kernelEvents = new List<string>();
             if (Program.kernel)
             {
                 Console.WriteLine("[*] starting enhanced kernel logging");
@@ -73,7 +75,12 @@ namespace YAETWi.Helper
                 {
                     if (pidAggr.ContainsKey(data.ProcessID))
                     {
-                        kernelEvents.Add(data.EventName);
+                        if (!kernelEvents.ContainsKey(data.ProcessID))
+                        {
+                            Console.WriteLine("put kernelevents key"); 
+                            kernelEvents[data.ProcessID] = new List<string>();
+                        }
+                        kernelEvents[data.ProcessID].Add(data.EventName);
                         if (Program.verbose)
                         { 
                             traceKernelEvents(data);

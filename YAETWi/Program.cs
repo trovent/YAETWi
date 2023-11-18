@@ -130,58 +130,53 @@ namespace YAETWi
                 switch (cki.Key)
                 {
                     case ConsoleKey.D:
-                        if (parameters.ContainsKey(ArgParser.Parameters.provider.ToString()))
+                    {
+                        if (ETW.pidAggr != null)
                         {
-                            if (ETW.pidAggr != null)
+                            foreach (int pid in ETW.pidAggr.Keys)
                             {
-                                foreach (int pid in ETW.pidAggr.Keys)
+                                Logger.printSeparatorStart();
+                                if (!verbose)
                                 {
-                                    if (!verbose)
-                                    {
-                                        Logger.ticker(pid, ETW.pidAggr);
-                                    }
-                                    else
-                                    {
-                                            Logger.ticker(pid, 
-                                                ETW.pidAggr, 
-                                                eventDescriptor, 
-                                                opcodeDescriptor);
-                                    }
-                                    if (kernel)
-                                    {
-                                        ETW.dumpKernelEvents();
-                                    }
+                                    Logger.ticker(pid, ETW.pidAggr);
                                 }
+                                else
+                                {
+                                        Logger.ticker(
+                                            pid, 
+                                            ETW.pidAggr, 
+                                            eventDescriptor, 
+                                            opcodeDescriptor);
+                                }
+                                ETW.dumpKernelEvents(pid);
+                                Logger.printSeparatorEnd();
                             }
                         }
-                        else
-                        {
-                            Console.WriteLine("[!] Dump is working only for custom sessions by providing a provider argument");
-                        }
+                    }
                         break;
                     case ConsoleKey.V:
                         if (!verbose)
                         {
                             verbose = true;
-                            Console.WriteLine("[*] Enabled verbose mode");
+                            Console.WriteLine("\n[*] Enabled verbose mode");
                         }
                         else
                         {
                             verbose = false;
-                            Console.WriteLine("[*] Disabled verbose mode");
+                            Console.WriteLine("\n[*] Disabled verbose mode");
                         }
                         break;
                     case ConsoleKey.K:
                         if (!kernel)
                         {
                             kernel = true;
-                            Console.WriteLine("[*] Enabled enhanced kernel logging");
+                            Console.WriteLine("\n[*] Enabled enhanced kernel logging");
                             ETW.traceKernel(enhancedKernelSession);
                         }
                         else
                         {
                             kernel = false;
-                            Console.WriteLine("[*] Disabled enhanced kernel logging");
+                            Console.WriteLine("\n[*] Disabled enhanced kernel logging");
                             ETW.traceKernel(enhancedKernelSession);
                         }
                         break;
