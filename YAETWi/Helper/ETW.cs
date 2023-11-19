@@ -3,9 +3,11 @@ using Microsoft.Diagnostics.Tracing.Parsers;
 using Microsoft.Diagnostics.Tracing.Parsers.Kernel;
 using Microsoft.Diagnostics.Tracing.Session;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics.Eventing.Reader;
 using System.Linq;
+using System.Net.NetworkInformation;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
@@ -14,10 +16,51 @@ namespace YAETWi.Helper
 {
 
     public static class ETW
-    {
-
+    { 
         public static Dictionary<int, Dictionary<string, object>> pidAggr = new Dictionary<int, Dictionary<string, object>>();
         private static Dictionary<int, List<string>> kernelEvents = new Dictionary<int, List<string>>();
+        private static ConcurrentDictionary<int, List<string>> etwProviders = new ConcurrentDictionary<int, List<string>>();
+
+        public static void traceAllProviders(TraceEventSession session)
+        {
+            session = new TraceEventSession("enhanced ETW session");
+            Console.WriteLine("[*] starting enhanced ETW session");
+            //TODO: generate list map of guids and names
+            foreach (var provider in EventLogSession.GlobalSession.GetProviderNames())
+            {
+                try
+                { 
+                    session.EnableProvider(provider);
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("[-] Cannot activate: " + provider);
+                }
+            }
+            Console.WriteLine(String.Format("[!] Enabled ETW providers"));
+            session.Source.AllEvents += ((TraceEvent data) =>
+            {
+                if (pidAggr.ContainsKey(data.ProcessID))
+                {
+                    if (!etwProviders.ContainsKey(data.ProcessID))
+                    {
+                        etwProviders[data.ProcessID] = new List<string>();
+                    }
+                    etwProviders[data.ProcessID].Add(data.ProviderGuid.ToString());
+                    if (Program.verbose)
+                    {
+                        traceETWProvider(data);
+                    }
+                }
+            });
+            Task.Run(() => session.Source.Process());
+        }
+
+        private static void traceETWProvider(TraceEvent data)
+        {
+            // TODO: Resolve GUID to name
+            Console.WriteLine(String.Format("{0}:{1}", data.ProcessID, data.ProviderName));
+        }
 
         public static Dictionary<int, string> describeEvents(string provider)
         {
@@ -52,14 +95,29 @@ namespace YAETWi.Helper
             }
         }
 
+        public static void dumpETWProviders(int pid)
+        {
+            if (etwProviders.ContainsKey(pid))
+            {
+                if (etwProviders[pid].Count() != 0)
+                { 
+                    IEnumerable<string> safeCopy = etwProviders[pid].Distinct();
+                    Console.WriteLine(String.Format("ETW Providers (unique): " +
+                    "\n[*] {0}\n", String.Join("\n[*] ", safeCopy)));
+                }
+            }
+        }
+
         public static void dumpKernelEvents(int pid)
         {
             if (kernelEvents.ContainsKey(pid))
             {
                 if (kernelEvents[pid].Count() != 0)
                 {
-                    Console.WriteLine(String.Format("Kernel Events (unique): \n[*] {0}\n", String.Join("\n[*] ",
-                        kernelEvents[pid].Distinct().ToArray())));
+                    IEnumerable<string> safeCopy = kernelEvents[pid].Distinct();
+                    Console.WriteLine(String.Format("Kernel Events (unique): " +
+                        "\n[*] {0}\n", String.Join("\n[*] ",
+                        safeCopy)));
                 }
             }
         }
@@ -77,7 +135,6 @@ namespace YAETWi.Helper
                     {
                         if (!kernelEvents.ContainsKey(data.ProcessID))
                         {
-                            Console.WriteLine("put kernelevents key"); 
                             kernelEvents[data.ProcessID] = new List<string>();
                         }
                         kernelEvents[data.ProcessID].Add(data.EventName);

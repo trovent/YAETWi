@@ -16,7 +16,8 @@ namespace YAETWi.Helper
             externalIP,
             provider,
             verbose,
-            kernel
+            kernel,
+            all
         }
 
         public static Dictionary<string, string> parse(string[] args)

@@ -30,12 +30,6 @@ namespace YAETWi
             else
             {
                 parameters = Helper.ArgParser.parse(args);
-                if (!(parameters.ContainsKey(ArgParser.Parameters.externalIP.ToString()) || 
-                    parameters.ContainsKey(ArgParser.Parameters.pid.ToString())))
-                {
-                    Helper.Help.usage();
-                    Environment.Exit(0);
-                }
 
                 if (parameters.ContainsKey(ArgParser.Parameters.verbose.ToString()))
                     verbose = true;
@@ -43,49 +37,66 @@ namespace YAETWi
                     kernel = true;
             }
 
-            Dictionary<int, string> eventDescriptor  = new Dictionary<int, string>();
+            TraceEventSession tcpipKernelSession = null;
+            if (parameters.ContainsKey(ArgParser.Parameters.externalIP.ToString()))
+            {
+                tcpipKernelSession = new TraceEventSession(KernelTraceEventParser.KernelSessionName);
+                tcpipKernelSession.EnableKernelProvider(KernelTraceEventParser.Keywords.NetworkTCPIP);
+                Console.WriteLine(String.Format("[*] starting kernel session"));
+
+                tcpipKernelSession.Source.Kernel.TcpIpAccept += ((TcpIpConnectTraceData data) =>
+                {
+                    Logger.logKernel(data);
+                    Console.WriteLine(String.Format("\n\t[!] conn: {0} -> :{1}\tproc: {2} -> {3}\n", data.daddr, data.sport, data.ProcessID, data.ProcessName));
+
+                    if (data.daddr.ToString() == parameters[ArgParser.Parameters.externalIP.ToString()])
+                    {
+                        extConn++;
+                        ETW.pidAggr = new Dictionary<int, Dictionary<string, object>>();
+                        var dict = new Dictionary<string, object>();
+                        dict[Logger.Log.timestamp.ToString()] = new Nullable<DateTime>();
+                        dict[Logger.Log.process.ToString()] = data.ProcessName;
+                        dict[Logger.Log.providerId.ToString()] = new Nullable<System.Guid>();
+                        dict[Logger.Log.eventId.ToString()] = new List<int>();
+                        dict[Logger.Log.opcodeId.ToString()] = new List<int>();
+                        ETW.pidAggr.Add(data.ProcessID, dict);
+                    }
+                });
+                Task.Run(() => tcpipKernelSession.Source.Process());
+            } else if (parameters.ContainsKey(ArgParser.Parameters.pid.ToString()))
+            {
+                ETW.pidAggr = new Dictionary<int, Dictionary<string, object>>();
+                var dict = new Dictionary<string, object>();
+                dict[Logger.Log.timestamp.ToString()] = new Nullable<DateTime>();
+                dict[Logger.Log.process.ToString()] = Process.GetProcessById(Convert.ToInt32(parameters[ArgParser.Parameters.pid.ToString()])).ProcessName;
+                dict[Logger.Log.providerId.ToString()] = new Nullable<System.Guid>();
+                dict[Logger.Log.eventId.ToString()] = new List<int>();
+                dict[Logger.Log.opcodeId.ToString()] = new List<int>();
+                ETW.pidAggr.Add(Convert.ToInt32(parameters[ArgParser.Parameters.pid.ToString()]), dict);
+            }
+            else
+            {
+                Helper.Help.usage();
+                Environment.Exit(0);
+            }
+
+            TraceEventSession enhancedKernelSession = null;
+            ETW.traceKernel(enhancedKernelSession);
+
+            TraceEventSession customSession = null;
+            TraceEventSession allETWProvidersSession = null;
+
+            Dictionary<int, string> eventDescriptor = new Dictionary<int, string>();
             Dictionary<int, string> opcodeDescriptor = new Dictionary<int, string>();
 
             if (parameters.ContainsKey(ArgParser.Parameters.provider.ToString()))
             {
                 eventDescriptor = ETW.describeEvents(parameters[ArgParser.Parameters.provider.ToString()]);
                 opcodeDescriptor = ETW.describeOpcodes(parameters[ArgParser.Parameters.provider.ToString()]);
-            }
 
-            var tcpipKernelSession = new TraceEventSession(KernelTraceEventParser.KernelSessionName);
-            tcpipKernelSession.EnableKernelProvider(KernelTraceEventParser.Keywords.NetworkTCPIP);
-            Console.WriteLine(String.Format("[*] starting kernel session"));
-
-            tcpipKernelSession.Source.Kernel.TcpIpAccept += ((TcpIpConnectTraceData data) =>
-            {
-                Logger.logKernel(data);
-                Console.WriteLine(String.Format("\n\t[!] conn: {0} -> :{1}\tproc: {2} -> {3}\n", data.daddr, data.sport, data.ProcessID, data.ProcessName));
-
-                if (data.daddr.ToString() == parameters[ArgParser.Parameters.externalIP.ToString()])
-                {
-                    extConn++;
-                    ETW.pidAggr = new Dictionary<int, Dictionary<string, object>>();
-                    /* clear on every event, otherwise check on condition (!pidAggregator.ContainsKey(data.ProcessID)) */
-                    var dict = new Dictionary<string, object>();
-                    dict[Logger.Log.timestamp.ToString()] = new Nullable<DateTime>();
-                    dict[Logger.Log.process.ToString()] = data.ProcessName;
-                    dict[Logger.Log.providerId.ToString()] = new Nullable<System.Guid>();
-                    dict[Logger.Log.eventId.ToString()] = new List<int>();
-                    dict[Logger.Log.opcodeId.ToString()] = new List<int>();
-                    ETW.pidAggr.Add(data.ProcessID, dict);
-                }
-            });
-            Task.Run(() => tcpipKernelSession.Source.Process());
-
-            TraceEventSession enhancedKernelSession = null;
-            ETW.traceKernel(enhancedKernelSession);
-
-            TraceEventSession customSession = null;
-
-            if (parameters.ContainsKey(ArgParser.Parameters.provider.ToString()))
-            {
                 customSession = new TraceEventSession("custom session");
                 customSession.EnableProvider(parameters[ArgParser.Parameters.provider.ToString()]);
+
                 Console.WriteLine(String.Format("[*] starting custom session: {0}", 
                     new ProviderMetadata(parameters[ArgParser.Parameters.provider.ToString()]).Name));
 
@@ -104,6 +115,10 @@ namespace YAETWi
 
                 Task.Run(() => customSession.Source.Process());
             }
+            else 
+            {
+                ETW.traceAllProviders(allETWProvidersSession);
+            }
 
             var start = DateTime.Now;
 
@@ -112,16 +127,15 @@ namespace YAETWi
                 Console.CancelKeyPress += delegate (object sender, ConsoleCancelEventArgs e)
                 {
                     var end = DateTime.Now;
-                    Console.WriteLine(String.Format("[*] Session started: {0}\n[*] Session ended: {1}\n[*] Overall time: {2}\n[*] Overall external connections: {3}",
+                    Console.WriteLine(String.Format("\n[*] Session started: {0}\n[*] Session ended: {1}\n[*] Overall time: {2}\n[*] Overall external connections: {3}",
                         start,
                         end,
                         end - start,
                         extConn));
-                    tcpipKernelSession.Dispose();
-                    if (customSession != null)
-                        customSession.Dispose();
-                    if (enhancedKernelSession != null)
-                        enhancedKernelSession.Dispose();
+                    tcpipKernelSession?.Dispose();
+                    customSession?.Dispose();
+                    allETWProvidersSession?.Dispose();
+                    enhancedKernelSession?.Dispose();
                     Environment.Exit(0);
                 };
 
@@ -136,19 +150,13 @@ namespace YAETWi
                             foreach (int pid in ETW.pidAggr.Keys)
                             {
                                 Logger.printSeparatorStart();
-                                if (!verbose)
-                                {
-                                    Logger.ticker(pid, ETW.pidAggr);
-                                }
-                                else
-                                {
-                                        Logger.ticker(
-                                            pid, 
-                                            ETW.pidAggr, 
-                                            eventDescriptor, 
-                                            opcodeDescriptor);
-                                }
+                                Logger.ticker(
+                                    pid, 
+                                    ETW.pidAggr, 
+                                    eventDescriptor, 
+                                    opcodeDescriptor);
                                 ETW.dumpKernelEvents(pid);
+                                ETW.dumpETWProviders(pid);
                                 Logger.printSeparatorEnd();
                             }
                         }

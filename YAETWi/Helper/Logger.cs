@@ -108,7 +108,8 @@ namespace YAETWi.Helper
             return sb.ToString();
         }
 
-        public static void ticker(int pid, Dictionary<int, Dictionary<string, object>> pidAggregator)
+        public static void ticker(int pid, 
+            Dictionary<int, Dictionary<string, object>> pidAggregator)
         {
             Nullable<System.Guid> guid = (Nullable<System.Guid>)pidAggregator?[pid][Logger.Log.providerId.ToString()];
             Console.WriteLine(String.Format("\n{0} pid: {1} -> {2}; providerId: <{3}>\n\n{4}\n{5}\n",
