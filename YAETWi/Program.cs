@@ -10,6 +10,7 @@ using Microsoft.Diagnostics.Tracing.Session;
 using YAETWi.Helper;
 using System.Diagnostics;
 using System.Diagnostics.Eventing.Reader;
+using System.Collections.Concurrent;
 
 namespace YAETWi
 {
@@ -52,27 +53,27 @@ namespace YAETWi
                     if (data.daddr.ToString() == parameters[ArgParser.Parameters.externalIP.ToString()])
                     {
                         extConn++;
-                        ETW.pidAggr = new Dictionary<int, Dictionary<string, object>>();
-                        var dict = new Dictionary<string, object>();
+                        ETW.pidAggr = new ConcurrentDictionary<int, ConcurrentDictionary<string, object>>();
+                        var dict = new ConcurrentDictionary<string, object>();
                         dict[Logger.Log.timestamp.ToString()] = new Nullable<DateTime>();
                         dict[Logger.Log.process.ToString()] = data.ProcessName;
                         dict[Logger.Log.providerId.ToString()] = new Nullable<System.Guid>();
                         dict[Logger.Log.eventId.ToString()] = new List<int>();
                         dict[Logger.Log.opcodeId.ToString()] = new List<int>();
-                        ETW.pidAggr.Add(data.ProcessID, dict);
+                        ETW.pidAggr.TryAdd(data.ProcessID, dict);
                     }
                 });
                 Task.Run(() => tcpipKernelSession.Source.Process());
             } else if (parameters.ContainsKey(ArgParser.Parameters.pid.ToString()))
             {
-                ETW.pidAggr = new Dictionary<int, Dictionary<string, object>>();
-                var dict = new Dictionary<string, object>();
+                ETW.pidAggr = new ConcurrentDictionary<int, ConcurrentDictionary<string, object>>();
+                var dict = new ConcurrentDictionary<string, object>();
                 dict[Logger.Log.timestamp.ToString()] = new Nullable<DateTime>();
                 dict[Logger.Log.process.ToString()] = Process.GetProcessById(Convert.ToInt32(parameters[ArgParser.Parameters.pid.ToString()])).ProcessName;
                 dict[Logger.Log.providerId.ToString()] = new Nullable<System.Guid>();
                 dict[Logger.Log.eventId.ToString()] = new List<int>();
                 dict[Logger.Log.opcodeId.ToString()] = new List<int>();
-                ETW.pidAggr.Add(Convert.ToInt32(parameters[ArgParser.Parameters.pid.ToString()]), dict);
+                ETW.pidAggr.TryAdd(Convert.ToInt32(parameters[ArgParser.Parameters.pid.ToString()]), dict);
             }
             else
             {
@@ -105,14 +106,13 @@ namespace YAETWi
                     /* check all events, otherwise check on condition: (data.ProviderGuid.ToString().Equals("1139c61b-b549-4251-8ed3-27250a1edec8")) */
                     if (ETW.pidAggr.ContainsKey(data.ProcessID))
                     {
-                        Dictionary<string, object> dict = ETW.pidAggr[data.ProcessID];
+                        ConcurrentDictionary<string, object> dict = ETW.pidAggr[data.ProcessID];
                         dict[Logger.Log.timestamp.ToString()]   = data.TimeStamp;
                         dict[Logger.Log.providerId.ToString()]  = data.ProviderGuid;
                         ((List<int>)dict[Logger.Log.eventId.ToString()]).Add(UInt16.Parse(data.EventName.Split('(', ')')[1]));
                         ((List<int>)dict[Logger.Log.opcodeId.ToString()]).Add((int)data.Opcode);
                     }
                 });
-
                 Task.Run(() => customSession.Source.Process());
             }
             else 

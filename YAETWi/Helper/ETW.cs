@@ -17,20 +17,29 @@ namespace YAETWi.Helper
 
     public static class ETW
     { 
-        public static Dictionary<int, Dictionary<string, object>> pidAggr = new Dictionary<int, Dictionary<string, object>>();
-        private static Dictionary<int, List<string>> kernelEvents = new Dictionary<int, List<string>>();
-        private static ConcurrentDictionary<int, List<string>> etwProviders = new ConcurrentDictionary<int, List<string>>();
+        public static ConcurrentDictionary<int, ConcurrentDictionary<string, object>> pidAggr = new ConcurrentDictionary<int, ConcurrentDictionary<string, object>>();
+        private static ConcurrentDictionary<int, ConcurrentBag<string>> kernelEvents = new ConcurrentDictionary<int, ConcurrentBag<string>>();
+        private static ConcurrentDictionary<int, ConcurrentBag<string>> etwProviders = new ConcurrentDictionary<int, ConcurrentBag<string>>();
+        private static ConcurrentDictionary<string, string> providersMap = new ConcurrentDictionary<string, string>();
 
         public static void traceAllProviders(TraceEventSession session)
         {
             session = new TraceEventSession("enhanced ETW session");
             Console.WriteLine("[*] starting enhanced ETW session");
-            //TODO: generate list map of guids and names
+            ProviderMetadata meta;
+            
             foreach (var provider in EventLogSession.GlobalSession.GetProviderNames())
             {
                 try
                 { 
-                    session.EnableProvider(provider);
+                    meta = new ProviderMetadata(provider);
+                    if (!meta.Id.ToString().Equals("00000000-0000-0000-0000-000000000000"))
+                    {
+                        session.EnableProvider(provider);
+                        providersMap.TryAdd(meta.Id.ToString(), provider);
+                        if (Program.verbose)
+                            Console.WriteLine("[*] added: " + meta.Id.ToString() + " " + provider);
+                    }
                 }
                 catch (Exception e)
                 {
@@ -38,13 +47,14 @@ namespace YAETWi.Helper
                 }
             }
             Console.WriteLine(String.Format("[!] Enabled ETW providers"));
+
             session.Source.AllEvents += ((TraceEvent data) =>
             {
                 if (pidAggr.ContainsKey(data.ProcessID))
                 {
                     if (!etwProviders.ContainsKey(data.ProcessID))
                     {
-                        etwProviders[data.ProcessID] = new List<string>();
+                        etwProviders[data.ProcessID] = new ConcurrentBag<string>();
                     }
                     etwProviders[data.ProcessID].Add(data.ProviderGuid.ToString());
                     if (Program.verbose)
@@ -58,7 +68,6 @@ namespace YAETWi.Helper
 
         private static void traceETWProvider(TraceEvent data)
         {
-            // TODO: Resolve GUID to name
             Console.WriteLine(String.Format("{0}:{1}", data.ProcessID, data.ProviderName));
         }
 
@@ -100,10 +109,13 @@ namespace YAETWi.Helper
             if (etwProviders.ContainsKey(pid))
             {
                 if (etwProviders[pid].Count() != 0)
-                { 
-                    IEnumerable<string> safeCopy = etwProviders[pid].Distinct();
-                    Console.WriteLine(String.Format("ETW Providers (unique): " +
-                    "\n[*] {0}\n", String.Join("\n[*] ", safeCopy)));
+                {
+                    Console.WriteLine("ETW Providers (unique): ");
+                    foreach (string provider in etwProviders[pid].Distinct())
+                    {
+                        Console.WriteLine(String.Format(
+                            "[*] {0} -> {1}", provider, providersMap[provider]));
+                    }
                 }
             }
         }
@@ -135,7 +147,7 @@ namespace YAETWi.Helper
                     {
                         if (!kernelEvents.ContainsKey(data.ProcessID))
                         {
-                            kernelEvents[data.ProcessID] = new List<string>();
+                            kernelEvents[data.ProcessID] = new ConcurrentBag<string>();
                         }
                         kernelEvents[data.ProcessID].Add(data.EventName);
                         if (Program.verbose)

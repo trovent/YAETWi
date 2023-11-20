@@ -1,6 +1,7 @@
 ﻿using Microsoft.Diagnostics.Tracing;
 using System;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
@@ -75,8 +76,9 @@ namespace YAETWi.Helper
             return sb.ToString();
         }
 
-        private static string listAggregator(int pid, 
-            Dictionary<int, Dictionary<string, object>> pidAggregator,
+        private static string listAggregator(
+            int pid, 
+            ConcurrentDictionary<int, ConcurrentDictionary<string, object>> pidAggregator,
             Dictionary<int, string> descriptor,
             String occurrence)
         {
@@ -108,8 +110,9 @@ namespace YAETWi.Helper
             return sb.ToString();
         }
 
-        public static void ticker(int pid, 
-            Dictionary<int, Dictionary<string, object>> pidAggregator)
+        public static void ticker(
+            int pid, 
+            ConcurrentDictionary<int, ConcurrentDictionary<string, object>> pidAggregator)
         {
             Nullable<System.Guid> guid = (Nullable<System.Guid>)pidAggregator?[pid][Logger.Log.providerId.ToString()];
             Console.WriteLine(String.Format("\n{0} pid: {1} -> {2}; providerId: <{3}>\n\n{4}\n{5}\n",
@@ -122,7 +125,7 @@ namespace YAETWi.Helper
             ));
         }
         public static void ticker(int pid, 
-            Dictionary<int, Dictionary<string, object>> pidAggregator, 
+            ConcurrentDictionary<int, ConcurrentDictionary<string, object>> pidAggregator, 
             Dictionary<int, string> eventDescriptor, 
             Dictionary<int, string> opcodeDescriptor)
         {
