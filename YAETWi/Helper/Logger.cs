@@ -36,6 +36,25 @@ namespace YAETWi.Helper
             kernelTcpIPAccept
         }
 
+        public static void printInfo(string text)
+        {
+            Console.WriteLine(String.Format("\n[*] {0}", text));
+        }
+
+        public static void printEvent(string text)
+        {
+            Console.WriteLine(String.Format("\n\t[!] {0}", text));
+        }
+
+        public static void printVerbose(string text)
+        {
+            Console.WriteLine(String.Format("[+] {0}", text));
+        }
+        public static void printNCFailure(string text)
+        {
+            Console.WriteLine(String.Format("[-] {0}", text));
+        }
+
         public static void printSeparatorStart()
         {
             Console.Write("\n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");

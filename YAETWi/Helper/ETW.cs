@@ -25,7 +25,7 @@ namespace YAETWi.Helper
         public static void traceAllProviders(TraceEventSession session)
         {
             session = new TraceEventSession("enhanced ETW session");
-            Console.WriteLine("[*] starting enhanced ETW session");
+            Logger.printInfo("starting enhanced ETW session");
             ProviderMetadata meta;
             
             foreach (var provider in EventLogSession.GlobalSession.GetProviderNames())
@@ -38,15 +38,16 @@ namespace YAETWi.Helper
                         session.EnableProvider(provider);
                         providersMap.TryAdd(meta.Id.ToString(), provider);
                         if (Program.verbose)
-                            Console.WriteLine("[*] added: " + meta.Id.ToString() + " " + provider);
+                            Logger.printVerbose(String.Format("added {0}:{1}", 
+                                meta.Id.ToString(), provider));
                     }
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
-                    Console.WriteLine("[-] Cannot activate: " + provider);
+                    Logger.printNCFailure(String.Format("cannot activate {0}", provider));
                 }
             }
-            Console.WriteLine(String.Format("[!] Enabled ETW providers"));
+            Logger.printInfo("Enabled ETW providers");
 
             session.Source.AllEvents += ((TraceEvent data) =>
             {
@@ -68,7 +69,7 @@ namespace YAETWi.Helper
 
         private static void traceETWProvider(TraceEvent data)
         {
-            Console.WriteLine(String.Format("{0}:{1}", data.ProcessID, data.ProviderName));
+            Logger.printVerbose(String.Format("{0}:{1}", data.ProcessID, data.ProviderName));
         }
 
         public static Dictionary<int, string> describeEvents(string provider)
@@ -95,15 +96,6 @@ namespace YAETWi.Helper
             return dict;
         }
 
-        public static void registryDataStream(RegistryTraceData data)
-        {
-            if (pidAggr.ContainsKey(data.ProcessID))
-            {
-                Logger.logKernel(data);
-                Console.WriteLine(String.Format("\t\t\t: {0}\tregistry: {1}:{2}\n", data.ProcessID, data.KeyName, data.ValueName));
-            }
-        }
-
         public static void dumpETWProviders(int pid)
         {
             if (etwProviders.ContainsKey(pid))
@@ -126,10 +118,9 @@ namespace YAETWi.Helper
             {
                 if (kernelEvents[pid].Count() != 0)
                 {
-                    IEnumerable<string> safeCopy = kernelEvents[pid].Distinct();
                     Console.WriteLine(String.Format("Kernel Events (unique): " +
                         "\n[*] {0}\n", String.Join("\n[*] ",
-                        safeCopy)));
+                        kernelEvents[pid].Distinct())));
                 }
             }
         }
@@ -139,7 +130,7 @@ namespace YAETWi.Helper
             kernelSession = new TraceEventSession("enhanced kernel session");
             if (Program.kernel)
             {
-                Console.WriteLine("[*] starting enhanced kernel logging");
+                Logger.printInfo("starting enhanced kernel logging");
                 kernelSession.EnableKernelProvider(KernelTraceEventParser.Keywords.All);
                 kernelSession.Source.Kernel.All += ((TraceEvent data) =>
                 {
@@ -373,6 +364,7 @@ namespace YAETWi.Helper
             else if (data is RegistryTraceData)
             {
                 Logger.logKernel(data);
+                Console.WriteLine(String.Format("\t\t\t: {0}\tregistry: {1}:{2}\n", data.ProcessID, ((RegistryTraceData)data).KeyName, ((RegistryTraceData)data).ValueName));
             }
             else if (data is SampledProfileIntervalTraceData)
             {
@@ -516,7 +508,7 @@ namespace YAETWi.Helper
             }
             else
             {
-                Console.WriteLine(String.Format("Unknown TraceData type: {0}", data.GetType()));
+                Logger.printNCFailure(String.Format("Unknown TraceData type: {0}", data.GetType()));
             }
         }
     }

@@ -48,7 +48,7 @@ namespace YAETWi
                 tcpipKernelSession.Source.Kernel.TcpIpAccept += ((TcpIpConnectTraceData data) =>
                 {
                     Logger.logKernel(data);
-                    Console.WriteLine(String.Format("\n\t[!] conn: {0} -> :{1}\tproc: {2} -> {3}\n", data.daddr, data.sport, data.ProcessID, data.ProcessName));
+                    Logger.printEvent(String.Format("conn: {0} -> :{1}\tproc: {2} -> {3}\n", data.daddr, data.sport, data.ProcessID, data.ProcessName));
 
                     if (data.daddr.ToString() == parameters[ArgParser.Parameters.externalIP.ToString()])
                     {
@@ -98,7 +98,7 @@ namespace YAETWi
                 customSession = new TraceEventSession("custom session");
                 customSession.EnableProvider(parameters[ArgParser.Parameters.provider.ToString()]);
 
-                Console.WriteLine(String.Format("[*] starting custom session: {0}", 
+                Logger.printInfo(String.Format("starting custom session: {0}", 
                     new ProviderMetadata(parameters[ArgParser.Parameters.provider.ToString()]).Name));
 
                 customSession.Source.AllEvents += ((TraceEvent data) =>
@@ -166,25 +166,25 @@ namespace YAETWi
                         if (!verbose)
                         {
                             verbose = true;
-                            Console.WriteLine("\n[*] Enabled verbose mode");
+                            Logger.printInfo("Enabled verbose mode");
                         }
                         else
                         {
                             verbose = false;
-                            Console.WriteLine("\n[*] Disabled verbose mode");
+                            Logger.printInfo("Disabled verbose mode");
                         }
                         break;
                     case ConsoleKey.K:
                         if (!kernel)
                         {
                             kernel = true;
-                            Console.WriteLine("\n[*] Enabled enhanced kernel logging");
+                            Logger.printInfo("Enabled enhanced kernel logging");
                             ETW.traceKernel(enhancedKernelSession);
                         }
                         else
                         {
                             kernel = false;
-                            Console.WriteLine("\n[*] Disabled enhanced kernel logging");
+                            Logger.printInfo("Disabled enhanced kernel logging");
                             ETW.traceKernel(enhancedKernelSession);
                         }
                         break;
