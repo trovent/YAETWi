@@ -2,9 +2,11 @@
 
 Yet Another ETW implementation;
 
+YAETWix (supportive tool) -> see description below;
+
 ### Description
 Imagine, you're writing your own detection rules based on the Windows log events.\
-YAETWi allows you to trace the connections from particular IP address by protocolling their PIDs and dump all event and opcode IDs of the particular ETW provider.
+YAETWi allows you to trace a particular process based on its PID (-> YAETWix) or based on the connections from a particular IP address providing a deep tracing based on implementation of the ETW interface. 
 
 ### Examples
 - Tracing impacket/rdp_check.py execution from Kali VM:
@@ -16,12 +18,28 @@ YAETWi allows you to trace the connections from particular IP address by protoco
 ```
 Usage:
          .\YAETWi.exe
-		/externalIP=<IP>	<- IP address the connections to be protocolled from
-	     	[/provider=<name>]  	<- if not provided, only kernel logs available
-		[/kernel]		<- enable kernel tracing (can be toggled via keystrokes while process execution)
-		[/verbose]		<- enable more verbose output (can be toggled via keystrokes while process execution)
+		/externalIP=<IP>  | /pid=<PID>		<- IP address the connections to be protocolled from | PID of the process (YAETWix or alternatively WinDBG can be used to suspend the process on its start)
+
+	     	[/provider=<name>]		  	<- if not provided, all providers will be activated and protocolled
+		[/kernel]				<- enables kernel tracing (can be toggled via keystroke while process execution)
+		[/verbose]				<- enables more verbose output (can be toggled via keystroke while process execution)
 Keystrokes:
          'v' -> switch verbose mode
 	 'k' -> enable/disable kernel logging
          'd' -> dump output
+```
+
+# YAETWix
+
+### Description
+YAETWix is a helper tool, which puts any process into suspended mode, obtains its PID, which in turn can be provided to YAETWi as an argument, and continues its execution, after you're ready.
+
+### MAN pages
+```
+Usage:
+        .\YAETWix.exe <"full_path_to_binary + arguments">
+Example:
+        .\YAETWix.exe "c:\windows\system32\cmd.exe /c whoami"
+Kestrokes:
+        r -> resume process
 ```
