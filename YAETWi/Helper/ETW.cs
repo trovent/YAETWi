@@ -17,11 +17,13 @@ namespace YAETWi.Helper
 
     public static class ETW
     { 
-        public static ConcurrentDictionary<int, ConcurrentDictionary<string, object>> pidAggr = new ConcurrentDictionary<int, ConcurrentDictionary<string, object>>();
         private static ConcurrentDictionary<int, ConcurrentBag<string>> kernelEvents = new ConcurrentDictionary<int, ConcurrentBag<string>>();
         private static ConcurrentDictionary<int, ConcurrentBag<string>> etwProviders = new ConcurrentDictionary<int, ConcurrentBag<string>>();
-        private static ConcurrentDictionary<string, string> providersMap = new ConcurrentDictionary<string, string>();
-
+        private static Dictionary<string, Data.Tracer> providerTracer = new Dictionary<string, Data.Tracer>();
+        public static ConcurrentDictionary<int, ConcurrentDictionary<string, object>> pidAggr = new ConcurrentDictionary<int, ConcurrentDictionary<string, object>>();
+        public static ConcurrentDictionary<string, string> providerMap = new ConcurrentDictionary<string, string>();
+        public static Dictionary<int, string> eventDescriptor;
+        public static Dictionary<int, string> opcodeDescriptor;
         public static void traceAllProviders(TraceEventSession session)
         {
             session = new TraceEventSession("enhanced ETW session");
@@ -36,10 +38,15 @@ namespace YAETWi.Helper
                     if (!meta.Id.ToString().Equals("00000000-0000-0000-0000-000000000000"))
                     {
                         session.EnableProvider(provider);
-                        providersMap.TryAdd(meta.Id.ToString(), provider);
+                        providerMap.TryAdd(meta.Id.ToString(), provider);
+                        providerMap.TryAdd(provider, meta.Id.ToString());
                         if (Program.verbose)
-                            Logger.printVerbose(String.Format("added {0}:{1}", 
+                            Logger.printVerbose(String.Format("added {0}:{1}",
                                 meta.Id.ToString(), provider));
+                        Data.Tracer t = new Data.Tracer(provider);
+                        t.eventMap = describeEvents(provider);
+                        t.opcodeMap = describeOpcodes(provider);
+                        providerTracer.Add(meta.Id.ToString(), t);
                     }
                 }
                 catch (Exception)
@@ -58,6 +65,13 @@ namespace YAETWi.Helper
                         etwProviders[data.ProcessID] = new ConcurrentBag<string>();
                     }
                     etwProviders[data.ProcessID].Add(data.ProviderGuid.ToString());
+
+                    Data.Tracer t = providerTracer[data.ProviderGuid.ToString()];
+                    int eventID = UInt16.Parse(data.EventName.Split('(', ')')[1]);
+                    int opcodeID = (int)data.Opcode;
+                    t.events.Enqueue(eventID);
+                    t.opcodes.Enqueue(opcodeID);
+                    
                     if (Program.verbose)
                     {
                         traceETWProvider(data);
@@ -76,8 +90,7 @@ namespace YAETWi.Helper
         {
             Dictionary<int, string> dict = new Dictionary<int, string>();
             ProviderMetadata meta = new ProviderMetadata(provider);
-            IEnumerable<EventMetadata> events = meta.Events;
-            foreach (EventMetadata m in events)
+            foreach (EventMetadata m in meta.Events)
             {
                 dict[(int)m.Id] = m.Description;
             }
@@ -88,8 +101,7 @@ namespace YAETWi.Helper
         {
             Dictionary<int, string> dict = new Dictionary<int, string>();
             ProviderMetadata meta = new ProviderMetadata(provider);
-            IList<System.Diagnostics.Eventing.Reader.EventOpcode> opcodes = meta.Opcodes;
-            foreach (System.Diagnostics.Eventing.Reader.EventOpcode o in opcodes)
+            foreach (EventOpcode o in meta.Opcodes)
             {
                 dict[o.Value] = o.DisplayName;
             }
@@ -102,11 +114,12 @@ namespace YAETWi.Helper
             {
                 if (etwProviders[pid].Count() != 0)
                 {
-                    Console.WriteLine("ETW Providers (unique): ");
+                    Console.WriteLine("ETW Providers: ");
                     foreach (string provider in etwProviders[pid].Distinct())
                     {
                         Console.WriteLine(String.Format(
-                            "[*] {0} -> {1}", provider, providersMap[provider]));
+                            "[*] {0} -> {1}", provider, providerMap[provider]));
+                        Console.WriteLine(providerTracer[provider].ToString());
                     }
                 }
             }

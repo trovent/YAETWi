@@ -87,13 +87,10 @@ namespace YAETWi
             TraceEventSession customSession = null;
             TraceEventSession allETWProvidersSession = null;
 
-            Dictionary<int, string> eventDescriptor = new Dictionary<int, string>();
-            Dictionary<int, string> opcodeDescriptor = new Dictionary<int, string>();
-
             if (parameters.ContainsKey(ArgParser.Parameters.provider.ToString()))
             {
-                eventDescriptor = ETW.describeEvents(parameters[ArgParser.Parameters.provider.ToString()]);
-                opcodeDescriptor = ETW.describeOpcodes(parameters[ArgParser.Parameters.provider.ToString()]);
+                ETW.eventDescriptor = ETW.describeEvents(parameters[ArgParser.Parameters.provider.ToString()]);
+                ETW.opcodeDescriptor = ETW.describeOpcodes(parameters[ArgParser.Parameters.provider.ToString()]);
 
                 customSession = new TraceEventSession("custom session");
                 customSession.EnableProvider(parameters[ArgParser.Parameters.provider.ToString()]);
@@ -153,8 +150,8 @@ namespace YAETWi
                                 Logger.ticker(
                                     pid, 
                                     ETW.pidAggr, 
-                                    eventDescriptor, 
-                                    opcodeDescriptor);
+                                    ETW.eventDescriptor, 
+                                    ETW.opcodeDescriptor);
                                 ETW.dumpKernelEvents(pid);
                                 ETW.dumpETWProviders(pid);
                                 Logger.printSeparatorEnd();

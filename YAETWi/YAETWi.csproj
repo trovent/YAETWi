@@ -93,6 +93,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Data\Tracer.cs" />
     <Compile Include="Helper\ArgParser.cs" />
     <Compile Include="Helper\ETW.cs" />
     <Compile Include="Helper\Help.cs" />

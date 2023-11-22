@@ -55,6 +55,11 @@ namespace YAETWi.Helper
             Console.WriteLine(String.Format("[-] {0}", text));
         }
 
+        public static void printSeparator()
+        {
+            Console.Write("====================================================");
+        }
+
         public static void printSeparatorStart()
         {
             Console.Write("\n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
