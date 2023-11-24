@@ -13,13 +13,12 @@ namespace YAETWi.Helper
         {
             Console.WriteLine("Usage:\n\t YAETWi.exe " +
                 "/externalIP=<IP> | /pid=<PID> " +
-                "[/provider=<name>] " +
-                "[/kernel] " +
                 "[/verbose]\n" +
                 "Keystrokes:\n" +
-                "\t 'v' -> switch verbose mode \n" +
-                "\t 'k' -> enable/disable kernel tracing \n" +
-                "\t 'd' -> dump output");
+                "\t 'd' -> dump all traced providers\n" +
+                "\t 'r' -> entry provider to print detailed output for\n" +
+                "\t 'p' -> purge all events\n" +
+                "\t 'v' -> switch verbose mode\n");
         }
     }
 }

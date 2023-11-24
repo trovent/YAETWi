@@ -44,7 +44,7 @@ namespace YAETWi.Data
             {
                 if (eventMap.TryGetValue(e, out desc))
                 {
-                    //
+                    // ...
                 }
                 else
                 {
@@ -64,7 +64,7 @@ namespace YAETWi.Data
             {
                 if (opcodeMap.TryGetValue(o, out desc))
                 {
-                    //
+                    // ...
                 }
                 else
                 {

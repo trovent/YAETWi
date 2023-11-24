@@ -1,16 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-
 using System.Threading.Tasks;
-using Microsoft.Diagnostics.Tracing;
+
 using Microsoft.Diagnostics.Tracing.Parsers;
 using Microsoft.Diagnostics.Tracing.Parsers.Kernel;
 using Microsoft.Diagnostics.Tracing.Session;
 
 using YAETWi.Helper;
-using System.Diagnostics;
-using System.Diagnostics.Eventing.Reader;
-using System.Collections.Concurrent;
 
 namespace YAETWi
 {
