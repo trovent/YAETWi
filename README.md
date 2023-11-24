@@ -19,14 +19,12 @@ YAETWi allows you to trace a particular process based on its PID (-> YAETWix) or
 Usage:
          .\YAETWi.exe
 		/externalIP=<IP>  | /pid=<PID>		<- IP address the connections to be protocolled from | PID of the process (YAETWix or alternatively WinDBG can be used to suspend the process on its start)
-
-	     	[/provider=<name>]		  	<- if not provided, all providers will be activated and protocolled
-		[/kernel]				<- enables kernel tracing (can be toggled via keystroke while process execution)
 		[/verbose]				<- enables more verbose output (can be toggled via keystroke while process execution)
 Keystrokes:
+         'd' -> dump all traced providers
+         'r' -> entry provider to print detailed output for
+         'p' -> purge all events
          'v' -> switch verbose mode
-	 'k' -> enable/disable kernel logging
-         'd' -> dump output
 ```
 
 # YAETWix
