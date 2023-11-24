@@ -6,78 +6,87 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics.Eventing.Reader;
-using System.Linq;
-using System.Net.NetworkInformation;
-using System.Runtime.CompilerServices;
-using System.Text;
 using System.Threading.Tasks;
+using YAETWi.Data;
 
 namespace YAETWi.Helper
 {
 
     public static class ETW
-    { 
-        private static ConcurrentDictionary<int, ConcurrentBag<string>> kernelEvents = new ConcurrentDictionary<int, ConcurrentBag<string>>();
-        private static ConcurrentDictionary<int, ConcurrentBag<string>> etwProviders = new ConcurrentDictionary<int, ConcurrentBag<string>>();
-        private static Dictionary<string, Data.Tracer> providerTracer = new Dictionary<string, Data.Tracer>();
-        public static ConcurrentDictionary<int, ConcurrentDictionary<string, object>> pidAggr = new ConcurrentDictionary<int, ConcurrentDictionary<string, object>>();
-        public static ConcurrentDictionary<string, string> providerMap = new ConcurrentDictionary<string, string>();
-        public static Dictionary<int, string> eventDescriptor;
-        public static Dictionary<int, string> opcodeDescriptor;
+    {
+        public static Provider provider = new Provider();
+        private static ConcurrentDictionary<string, Data.Tracer> providerToTracer = new ConcurrentDictionary<string, Data.Tracer>();
+
+        public static void refreshCollection()
+        {
+            Logger.printInfo("refreshing collection...");
+            foreach (string p in provider.providersByName.Keys)
+            {
+                string guid = provider.providersAll[p];
+                try
+                {
+                    Data.Tracer t;
+                    if (providerToTracer.ContainsKey(guid))
+                    {
+                        providerToTracer.TryRemove(guid, out t);
+                    }
+                    else
+                    {
+                        t = new Data.Tracer(p);
+                    }
+                    t.opcodes = new ConcurrentQueue<int>();
+                    t.events = new ConcurrentQueue<int>();
+                    t.eventMap = describeEvents(p);
+                    t.opcodeMap = describeOpcodes(p);
+                    providerToTracer.TryAdd(guid, t);
+                }
+                catch (Exception){}
+            }
+            Logger.printInfo("successfully refreshed the collection");
+        }
         public static void traceAllProviders(TraceEventSession session)
         {
             session = new TraceEventSession("enhanced ETW session");
             Logger.printInfo("starting enhanced ETW session");
-            ProviderMetadata meta;
-            
-            foreach (var provider in EventLogSession.GlobalSession.GetProviderNames())
+            foreach(string p in provider.providersByName.Keys)
             {
                 try
-                { 
-                    meta = new ProviderMetadata(provider);
-                    if (!meta.Id.ToString().Equals("00000000-0000-0000-0000-000000000000"))
-                    {
-                        session.EnableProvider(provider);
-                        providerMap.TryAdd(meta.Id.ToString(), provider);
-                        providerMap.TryAdd(provider, meta.Id.ToString());
-                        if (Program.verbose)
-                            Logger.printVerbose(String.Format("added {0}:{1}",
-                                meta.Id.ToString(), provider));
-                        Data.Tracer t = new Data.Tracer(provider);
-                        t.eventMap = describeEvents(provider);
-                        t.opcodeMap = describeOpcodes(provider);
-                        providerTracer.Add(meta.Id.ToString(), t);
-                    }
+                {
+                    session.EnableProvider(p);
+                    if (Program.verbose)
+                        Logger.printVerbose(String.Format("activated provider: {0}", p));
                 }
                 catch (Exception)
                 {
-                    Logger.printNCFailure(String.Format("cannot activate {0}", provider));
+                    Logger.printNCFailure(String.Format("cannot activate {0}", p));
                 }
             }
-            Logger.printInfo("Enabled ETW providers");
+
+            refreshCollection();
+
+            Logger.printInfo("activated all ETW providers");
 
             session.Source.AllEvents += ((TraceEvent data) =>
             {
-                if (pidAggr.ContainsKey(data.ProcessID))
+                if (data.ProcessID == Program.pid)
                 {
-                    if (!etwProviders.ContainsKey(data.ProcessID))
+                    if (!data.ProviderGuid.ToString().Equals("00000000-0000-0000-0000-000000000000"))
                     {
-                        etwProviders[data.ProcessID] = new ConcurrentBag<string>();
-                    }
-                    etwProviders[data.ProcessID].Add(data.ProviderGuid.ToString());
-
-                    Data.Tracer t = providerTracer[data.ProviderGuid.ToString()];
-                    int eventID = UInt16.Parse(data.EventName.Split('(', ')')[1]);
-                    int opcodeID = (int)data.Opcode;
-                    t.events.Enqueue(eventID);
-                    t.opcodes.Enqueue(opcodeID);
-                    
-                    if (Program.verbose)
-                    {
-                        traceETWProvider(data);
+                        try
+                        {
+                            Data.Tracer t = providerToTracer[data.ProviderGuid.ToString()];
+                            int eventID = UInt16.Parse(data.EventName.Split('(', ')')[1]);
+                            int opcodeID = (int)data.Opcode;
+                            t.events.Enqueue(eventID);
+                            t.opcodes.Enqueue(opcodeID);
+                            t.data = data;
+                            t.isTraced = true;
+                        }
+                        catch (Exception) {}
                     }
                 }
             });
+
             Task.Run(() => session.Source.Process());
         }
 
@@ -108,66 +117,32 @@ namespace YAETWi.Helper
             return dict;
         }
 
-        public static void dumpETWProviders(int pid)
+        public static void dumpETWProvider(string p)
         {
-            if (etwProviders.ContainsKey(pid))
+            try
             {
-                if (etwProviders[pid].Count() != 0)
+                string guid = provider.providersAll[p];
+                Logger.printSeparatorStart();
+                providerToTracer[guid].print();
+                Logger.printSeparatorEnd();
+            }
+            catch (Exception)
+            {
+                Logger.printNCFailure("wrong provider name");
+            }
+        }
+        public static void dumpETWProviders()
+        {
+            Console.WriteLine("ETW Providers: ");
+            foreach (KeyValuePair<string, Data.Tracer> kvp in providerToTracer)
+            {
+                if (kvp.Value.isTraced)
                 {
-                    Console.WriteLine("ETW Providers: ");
-                    foreach (string provider in etwProviders[pid].Distinct())
-                    {
-                        Console.WriteLine(String.Format(
-                            "[*] {0} -> {1}", provider, providerMap[provider]));
-                        Console.WriteLine(providerTracer[provider].ToString());
-                    }
+                    Console.WriteLine(kvp.Value.provider);
                 }
             }
         }
 
-        public static void dumpKernelEvents(int pid)
-        {
-            if (kernelEvents.ContainsKey(pid))
-            {
-                if (kernelEvents[pid].Count() != 0)
-                {
-                    Console.WriteLine(String.Format("Kernel Events (unique): " +
-                        "\n[*] {0}\n", String.Join("\n[*] ",
-                        kernelEvents[pid].Distinct())));
-                }
-            }
-        }
-
-        public static void traceKernel(TraceEventSession kernelSession)
-        {
-            kernelSession = new TraceEventSession("enhanced kernel session");
-            if (Program.kernel)
-            {
-                Logger.printInfo("starting enhanced kernel logging");
-                kernelSession.EnableKernelProvider(KernelTraceEventParser.Keywords.All);
-                kernelSession.Source.Kernel.All += ((TraceEvent data) =>
-                {
-                    if (pidAggr.ContainsKey(data.ProcessID))
-                    {
-                        if (!kernelEvents.ContainsKey(data.ProcessID))
-                        {
-                            kernelEvents[data.ProcessID] = new ConcurrentBag<string>();
-                        }
-                        kernelEvents[data.ProcessID].Add(data.EventName);
-                        if (Program.verbose)
-                        { 
-                            traceKernelEvents(data);
-                        }
-                    }
-                });
-                Task.Run(() => kernelSession.Source.Process());
-            }
-            else
-            {
-                kernelSession.Stop();
-                kernelSession.Dispose();
-            }
-        }
         private static void traceKernelEvents(TraceEvent data)
         {
             if (data is ALPCReceiveMessageTraceData)

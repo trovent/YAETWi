@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Diagnostics.Tracing;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,6 +16,9 @@ namespace YAETWi.Data
         public Dictionary<int, string> opcodeMap { get; set; }
         public ConcurrentQueue<int> events { get; set; }
         public ConcurrentQueue<int> opcodes { get; set; }
+        public TraceEvent data { get; set; }
+
+        public bool isTraced = false;
 
         public DateTime timestamp;
         public int pid;
@@ -29,6 +33,8 @@ namespace YAETWi.Data
             this.opcodes = new ConcurrentQueue<int>();
         }
 
+        public Tracer() { }
+
         private string resolveEventMap()
         {
             string desc = "";
@@ -36,7 +42,15 @@ namespace YAETWi.Data
             builder.Append("EventIDs:\n");
             foreach (int e in events)
             {
-                builder.Append(String.Format("{0} -> {1}\n", e, eventMap.TryGetValue(e, out desc) ? desc : ""));
+                if (eventMap.TryGetValue(e, out desc))
+                {
+                    //
+                }
+                else
+                {
+                    desc = "";
+                }
+                builder.Append(String.Format("\t{0} -> {1}\n", e, desc));
             }
             return builder.ToString();
         }
@@ -48,7 +62,15 @@ namespace YAETWi.Data
             builder.Append("OpcodeIDs:\n");
             foreach (int o in opcodes)
             {
-                builder.Append(String.Format("{0} -> {1}\n", o, opcodeMap.TryGetValue(o, out desc) ? desc : ""));
+                if (opcodeMap.TryGetValue(o, out desc))
+                {
+                    //
+                }
+                else
+                {
+                    desc = "";
+                }
+                builder.Append(String.Format("\t{0} -> {1}\n", o, desc));
             }
 
             return builder.ToString();
@@ -57,10 +79,16 @@ namespace YAETWi.Data
         public override string ToString()
         {
             StringBuilder builder = new StringBuilder();
-            builder.Append(String.Format("Provider: {0} <-> GUID: {1}\n", provider, ETW.providerMap?[provider] ?? ""));
+            builder.Append(String.Format("[*] Provider: {0} <-> GUID: {1}\n", provider, ETW.provider.providersAll?[provider] ?? ""));
             builder.Append(resolveEventMap());
+            builder.AppendLine();
             builder.Append(resolveOpcodeMap());
             return builder.ToString();
+        }
+
+        public void print()
+        {
+            Console.WriteLine(this.ToString());
         }
     }
 }

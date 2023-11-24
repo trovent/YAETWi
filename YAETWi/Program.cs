@@ -18,32 +18,21 @@ namespace YAETWi
     {
         private static Dictionary<string, string> parameters = new Dictionary<string, string>();
         private static int extConn = 0;
+        public static int pid = -1;
         public static bool verbose = false;
-        public static bool kernel = false;
 
         static void Main(string[] args)
         {
-            if (args.Length == 0)
-            {
-                Helper.Help.usage();
-                Environment.Exit(0);
-            }
-            else
-            {
-                parameters = Helper.ArgParser.parse(args);
-
-                if (parameters.ContainsKey(ArgParser.Parameters.verbose.ToString()))
-                    verbose = true;
-                if (parameters.ContainsKey(ArgParser.Parameters.kernel.ToString()))
-                    kernel = true;
-            }
+            parameters = Helper.ArgParser.parse(args);
+            if (parameters.ContainsKey(ArgParser.Parameters.verbose.ToString()))
+                verbose = true;
 
             TraceEventSession tcpipKernelSession = null;
             if (parameters.ContainsKey(ArgParser.Parameters.externalIP.ToString()))
             {
                 tcpipKernelSession = new TraceEventSession(KernelTraceEventParser.KernelSessionName);
                 tcpipKernelSession.EnableKernelProvider(KernelTraceEventParser.Keywords.NetworkTCPIP);
-                Console.WriteLine(String.Format("[*] starting kernel session"));
+                Console.WriteLine(String.Format("[*] starting tcpip session"));
 
                 tcpipKernelSession.Source.Kernel.TcpIpAccept += ((TcpIpConnectTraceData data) =>
                 {
@@ -53,27 +42,14 @@ namespace YAETWi
                     if (data.daddr.ToString() == parameters[ArgParser.Parameters.externalIP.ToString()])
                     {
                         extConn++;
-                        ETW.pidAggr = new ConcurrentDictionary<int, ConcurrentDictionary<string, object>>();
-                        var dict = new ConcurrentDictionary<string, object>();
-                        dict[Logger.Log.timestamp.ToString()] = new Nullable<DateTime>();
-                        dict[Logger.Log.process.ToString()] = data.ProcessName;
-                        dict[Logger.Log.providerId.ToString()] = new Nullable<System.Guid>();
-                        dict[Logger.Log.eventId.ToString()] = new List<int>();
-                        dict[Logger.Log.opcodeId.ToString()] = new List<int>();
-                        ETW.pidAggr.TryAdd(data.ProcessID, dict);
+                        pid = data.ProcessID;
                     }
                 });
                 Task.Run(() => tcpipKernelSession.Source.Process());
+
             } else if (parameters.ContainsKey(ArgParser.Parameters.pid.ToString()))
             {
-                ETW.pidAggr = new ConcurrentDictionary<int, ConcurrentDictionary<string, object>>();
-                var dict = new ConcurrentDictionary<string, object>();
-                dict[Logger.Log.timestamp.ToString()] = new Nullable<DateTime>();
-                dict[Logger.Log.process.ToString()] = Process.GetProcessById(Convert.ToInt32(parameters[ArgParser.Parameters.pid.ToString()])).ProcessName;
-                dict[Logger.Log.providerId.ToString()] = new Nullable<System.Guid>();
-                dict[Logger.Log.eventId.ToString()] = new List<int>();
-                dict[Logger.Log.opcodeId.ToString()] = new List<int>();
-                ETW.pidAggr.TryAdd(Convert.ToInt32(parameters[ArgParser.Parameters.pid.ToString()]), dict);
+                pid = Convert.ToUInt16(parameters[ArgParser.Parameters.pid.ToString()]);
             }
             else
             {
@@ -81,41 +57,8 @@ namespace YAETWi
                 Environment.Exit(0);
             }
 
-            TraceEventSession enhancedKernelSession = null;
-            ETW.traceKernel(enhancedKernelSession);
-
-            TraceEventSession customSession = null;
-            TraceEventSession allETWProvidersSession = null;
-
-            if (parameters.ContainsKey(ArgParser.Parameters.provider.ToString()))
-            {
-                ETW.eventDescriptor = ETW.describeEvents(parameters[ArgParser.Parameters.provider.ToString()]);
-                ETW.opcodeDescriptor = ETW.describeOpcodes(parameters[ArgParser.Parameters.provider.ToString()]);
-
-                customSession = new TraceEventSession("custom session");
-                customSession.EnableProvider(parameters[ArgParser.Parameters.provider.ToString()]);
-
-                Logger.printInfo(String.Format("starting custom session: {0}", 
-                    new ProviderMetadata(parameters[ArgParser.Parameters.provider.ToString()]).Name));
-
-                customSession.Source.AllEvents += ((TraceEvent data) =>
-                {
-                    /* check all events, otherwise check on condition: (data.ProviderGuid.ToString().Equals("1139c61b-b549-4251-8ed3-27250a1edec8")) */
-                    if (ETW.pidAggr.ContainsKey(data.ProcessID))
-                    {
-                        ConcurrentDictionary<string, object> dict = ETW.pidAggr[data.ProcessID];
-                        dict[Logger.Log.timestamp.ToString()]   = data.TimeStamp;
-                        dict[Logger.Log.providerId.ToString()]  = data.ProviderGuid;
-                        ((List<int>)dict[Logger.Log.eventId.ToString()]).Add(UInt16.Parse(data.EventName.Split('(', ')')[1]));
-                        ((List<int>)dict[Logger.Log.opcodeId.ToString()]).Add((int)data.Opcode);
-                    }
-                });
-                Task.Run(() => customSession.Source.Process());
-            }
-            else 
-            {
-                ETW.traceAllProviders(allETWProvidersSession);
-            }
+            TraceEventSession allProvidersSession = null;
+            ETW.traceAllProviders(allProvidersSession);
 
             var start = DateTime.Now;
 
@@ -130,9 +73,7 @@ namespace YAETWi
                         end - start,
                         extConn));
                     tcpipKernelSession?.Dispose();
-                    customSession?.Dispose();
-                    allETWProvidersSession?.Dispose();
-                    enhancedKernelSession?.Dispose();
+                    allProvidersSession?.Dispose();
                     Environment.Exit(0);
                 };
 
@@ -140,24 +81,17 @@ namespace YAETWi
 
                 switch (cki.Key)
                 {
-                    case ConsoleKey.D:
-                    {
-                        if (ETW.pidAggr != null)
+                    case ConsoleKey.R:
                         {
-                            foreach (int pid in ETW.pidAggr.Keys)
-                            {
-                                Logger.printSeparatorStart();
-                                Logger.ticker(
-                                    pid, 
-                                    ETW.pidAggr, 
-                                    ETW.eventDescriptor, 
-                                    ETW.opcodeDescriptor);
-                                ETW.dumpKernelEvents(pid);
-                                ETW.dumpETWProviders(pid);
-                                Logger.printSeparatorEnd();
-                            }
+                            Console.Write("Entry provider name:");
+                            string p = Console.ReadLine();
+                            ETW.dumpETWProvider(p);
+                            break;
                         }
-                    }
+                    case ConsoleKey.D:
+                        {
+                            ETW.dumpETWProviders();
+                        }
                         break;
                     case ConsoleKey.V:
                         if (!verbose)
@@ -171,18 +105,10 @@ namespace YAETWi
                             Logger.printInfo("Disabled verbose mode");
                         }
                         break;
-                    case ConsoleKey.K:
-                        if (!kernel)
+                    case ConsoleKey.P:
                         {
-                            kernel = true;
-                            Logger.printInfo("Enabled enhanced kernel logging");
-                            ETW.traceKernel(enhancedKernelSession);
-                        }
-                        else
-                        {
-                            kernel = false;
-                            Logger.printInfo("Disabled enhanced kernel logging");
-                            ETW.traceKernel(enhancedKernelSession);
+                            ETW.refreshCollection();
+                            Logger.printInfo("Purged collections");
                         }
                         break;
                 }
