@@ -25,7 +25,7 @@ namespace YAETWi.Helper
                 "\t 'c' -> (clear) all events\n" +
                 "\t 'p' -> change (pid) to be traced -> previous collections will be purged\n" +
                 "\t 'v' -> switch (verbose) mode\n" +
-                "\t 'h' -> print keystrokes");
+                "\t 'h' -> show (help) menu");
         }
     }
 }

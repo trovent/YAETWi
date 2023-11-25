@@ -20,11 +20,14 @@ Usage:
          .\YAETWi.exe
 		/externalIP=<IP>  | /pid=<PID>		<- IP address the connections to be protocolled from | PID of the process (YAETWix or alternatively WinDBG can be used to suspend the process on its start)
 		[/verbose]				<- enables more verbose output (can be toggled via keystroke while process execution)
+ 		[/kernel]				<- start kernel session 
 Keystrokes:
-         'd' -> dump all traced providers
-         'r' -> entry provider to print detailed output for
-         'p' -> purge all events
-         'v' -> switch verbose mode
+         'd' -> (dump) all traced providers
+         'r' -> (read) provider name to print detailed output for
+         'c' -> (clear) all events
+         'p' -> change (pid) to be traced -> previous collections will be purged
+         'v' -> switch (verbose) mode
+         'h' -> print keystrokes
 ```
 
 # YAETWix
