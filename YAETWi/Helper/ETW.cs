@@ -14,8 +14,9 @@ namespace YAETWi.Helper
 
     public static class ETW
     {
-        public static Provider provider = new Provider();
+        private static HashSet<string> kernelEvents = new HashSet<string>();
         private static ConcurrentDictionary<string, Data.Tracer> providerToTracer = new ConcurrentDictionary<string, Data.Tracer>();
+        public static Provider provider = new Provider();
 
         public static void refreshCollection()
         {
@@ -44,6 +45,38 @@ namespace YAETWi.Helper
             }
             Logger.printInfo("successfully refreshed the collection");
         }
+
+        public static void dumpKernelEvents()
+        {
+            Console.WriteLine("\nKernel Events:");
+            foreach (string kevent in kernelEvents)
+            {
+                Console.WriteLine(kevent);
+            }
+        }
+
+        public static void traceKernel(TraceEventSession session)
+        {
+            session = new TraceEventSession("kernel session");
+            Logger.printInfo("starting kernel session");
+            session.EnableKernelProvider(KernelTraceEventParser.Keywords.All);
+
+            session.Source.Kernel.All += ((TraceEvent data) =>
+            {
+                if (data.ProcessID == Program.pid)
+                {
+                    Program.events++;
+                    kernelEvents.Add(data.GetType().ToString());
+                    if (Program.verbose)
+                    {
+                        parseKernelEvents(data);
+                    }
+                }
+            });
+
+            Task.Run(() => session.Source.Process());
+        }
+
         public static void traceAllProviders(TraceEventSession session)
         {
             session = new TraceEventSession("enhanced ETW session");
@@ -74,6 +107,8 @@ namespace YAETWi.Helper
                     {
                         try
                         {
+                            Program.events++;
+
                             Data.Tracer t = providerToTracer[data.ProviderGuid.ToString()];
                             int eventID = UInt16.Parse(data.EventName.Split('(', ')')[1]);
                             int opcodeID = (int)data.Opcode;
@@ -131,9 +166,10 @@ namespace YAETWi.Helper
                 Logger.printNCFailure("wrong provider name");
             }
         }
+
         public static void dumpETWProviders()
         {
-            Console.WriteLine("ETW Providers: ");
+            Console.WriteLine("\nETW Providers: ");
             foreach (KeyValuePair<string, Data.Tracer> kvp in providerToTracer)
             {
                 if (kvp.Value.isTraced)
@@ -143,7 +179,7 @@ namespace YAETWi.Helper
             }
         }
 
-        private static void traceKernelEvents(TraceEvent data)
+        private static void parseKernelEvents(TraceEvent data)
         {
             if (data is ALPCReceiveMessageTraceData)
             {
@@ -264,6 +300,8 @@ namespace YAETWi.Helper
             else if (data is ImageLoadTraceData)
             {
                 Logger.logKernel(data);
+                Console.WriteLine(String.Format("FileName: {0}",
+                    ((ImageLoadTraceData)data).FileName));
             }
             else if (data is ISRTraceData)
             {
@@ -352,7 +390,7 @@ namespace YAETWi.Helper
             else if (data is RegistryTraceData)
             {
                 Logger.logKernel(data);
-                Console.WriteLine(String.Format("\t\t\t: {0}\tregistry: {1}:{2}\n", data.ProcessID, ((RegistryTraceData)data).KeyName, ((RegistryTraceData)data).ValueName));
+                Console.WriteLine(String.Format("\t\t\t{0}\tregistry: {1}:{2}\n", data.ProcessID, ((RegistryTraceData)data).KeyName, ((RegistryTraceData)data).ValueName));
             }
             else if (data is SampledProfileIntervalTraceData)
             {

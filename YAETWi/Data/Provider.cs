@@ -16,11 +16,11 @@ namespace YAETWi.Data
             providersByName = new Dictionary<string, string>();
             providersByGUID = new Dictionary<string, string>();
             providersAll = new Dictionary<string, string>();
-            mapProviders();
-            providersAll = mergeProviders();
+            if (!Program.kernel)
+                mapProviders();
         }
 
-        void mapProviders()
+        public void mapProviders()
         {
             Logger.printInfo("Obtaining meta information for providers");
             ProviderMetadata meta;
@@ -40,9 +40,10 @@ namespace YAETWi.Data
                     Logger.printNCFailure(String.Format("cannot find meta information for the provider: {0}", provider));
                 }
             }
+            providersAll = mergeProviders();
         }
 
-        Dictionary<string, string> mergeProviders()
+        private Dictionary<string, string> mergeProviders()
         {
             Dictionary<string, string> dict = new Dictionary<string, string>();
             foreach (KeyValuePair<string, string> kvp in providersByName)

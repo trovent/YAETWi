@@ -1,12 +1,5 @@
 ﻿using Microsoft.Diagnostics.Tracing;
 using System;
-using System.Collections.Generic;
-using System.Collections.Concurrent;
-using System.ComponentModel;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace YAETWi.Helper
 {
@@ -48,13 +41,18 @@ namespace YAETWi.Helper
 
         public static void logKernel(TraceEvent data)
         {
-            Console.WriteLine(String.Format("\n{0}\tPID: {1}\n\t[*] Stream: {2}\n\t[*] Event: {3}\n\t[*] Opcode: {4} -> {5}", 
-                data.TimeStamp, 
-                data.ProcessID, 
-                data.GetType(), 
+            Console.WriteLine(String.Format(
+                "\n{0}\tPID: {1}" +
+                "\n\t[*] Stream: {2}" +
+                "\n\t[*] Event: {3}" +
+                "\n\t[*] Opcode: {4} -> {5}",
+                data.TimeStamp,
+                data.ProcessID,
+                data.GetType(),
                 data.EventName,
                 (int)data.Opcode,
-                data.OpcodeName));
+                data.OpcodeName
+                ));
         }
     }
 }

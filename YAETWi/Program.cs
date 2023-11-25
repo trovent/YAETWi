@@ -14,7 +14,9 @@ namespace YAETWi
     {
         private static Dictionary<string, string> parameters = new Dictionary<string, string>();
         private static int extConn = 0;
-        public static int pid = -1;
+        public static int pid = -2;
+        public static int events = 0;
+        public static bool kernel = false;
         public static bool verbose = false;
 
         static void Main(string[] args)
@@ -22,6 +24,8 @@ namespace YAETWi
             parameters = Helper.ArgParser.parse(args);
             if (parameters.ContainsKey(ArgParser.Parameters.verbose.ToString()))
                 verbose = true;
+            if (parameters.ContainsKey(ArgParser.Parameters.kernel.ToString()))
+                kernel = true;
 
             TraceEventSession tcpipKernelSession = null;
             if (parameters.ContainsKey(ArgParser.Parameters.externalIP.ToString()))
@@ -49,12 +53,20 @@ namespace YAETWi
             }
             else
             {
-                Helper.Help.usage();
+                Helper.Help.print();
                 Environment.Exit(0);
             }
 
+            TraceEventSession kernelSession = null;
             TraceEventSession allProvidersSession = null;
-            ETW.traceAllProviders(allProvidersSession);
+            if (kernel)
+            {
+                ETW.traceKernel(kernelSession);
+            }
+            else
+            {
+                ETW.traceAllProviders(allProvidersSession);
+            }
 
             var start = DateTime.Now;
 
@@ -63,13 +75,22 @@ namespace YAETWi
                 Console.CancelKeyPress += delegate (object sender, ConsoleCancelEventArgs e)
                 {
                     var end = DateTime.Now;
-                    Console.WriteLine(String.Format("\n[*] Session started: {0}\n[*] Session ended: {1}\n[*] Overall time: {2}\n[*] Overall external connections: {3}",
+                    Console.WriteLine(String.Format("\n[*] Session started: {0}\n[*] Session ended: {1}\n[*] Overall time: {2}\n[*] Overall external connections: {3}\n[*] # of events: {4}\n",
                         start,
                         end,
                         end - start,
-                        extConn));
-                    tcpipKernelSession?.Dispose();
-                    allProvidersSession?.Dispose();
+                        extConn,
+                        events));
+                    try
+                    {
+                        tcpipKernelSession?.Dispose();
+                        allProvidersSession?.Dispose();
+                        kernelSession?.Dispose();
+                    }
+                    catch (Exception err)
+                    {
+                        Console.WriteLine(err);
+                    }
                     Environment.Exit(0);
                 };
 
@@ -79,7 +100,7 @@ namespace YAETWi
                 {
                     case ConsoleKey.R:
                         {
-                            Console.Write("Entry provider name:");
+                            Console.Write("Enter provider name:");
                             string p = Console.ReadLine();
                             ETW.dumpETWProvider(p);
                             break;
@@ -87,6 +108,7 @@ namespace YAETWi
                     case ConsoleKey.D:
                         {
                             ETW.dumpETWProviders();
+                            ETW.dumpKernelEvents();
                         }
                         break;
                     case ConsoleKey.V:
@@ -101,12 +123,25 @@ namespace YAETWi
                             Logger.printInfo("Disabled verbose mode");
                         }
                         break;
-                    case ConsoleKey.P:
+                    case ConsoleKey.C:
                         {
                             ETW.refreshCollection();
                             Logger.printInfo("Purged collections");
                         }
                         break;
+                    case ConsoleKey.P:
+                        {
+                            Console.Write("Enter PID to monitor:");
+                            string p = Console.ReadLine();
+                            ETW.refreshCollection();
+                            pid = Convert.ToInt32(p);
+                            break;
+                        }
+                    case ConsoleKey.H:
+                        {
+                            Helper.Help.keystrokes();
+                            break;
+                        }
                 }
             }
         }
