@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 using Microsoft.Diagnostics.Tracing.Parsers;
@@ -13,8 +14,8 @@ namespace YAETWi
     class Program
     {
         private static Dictionary<string, string> parameters = new Dictionary<string, string>();
+        public static HashSet<int> pids = new HashSet<int>();
         private static int extConn = 0;
-        public static int pid = -2;
         public static int events = 0;
         public static bool kernel = false;
         public static bool verbose = false;
@@ -42,14 +43,14 @@ namespace YAETWi
                     if (data.daddr.ToString() == parameters[ArgParser.Parameters.externalIP.ToString()])
                     {
                         extConn++;
-                        pid = data.ProcessID;
+                        pids.Add(data.ProcessID);
                     }
                 });
                 Task.Run(() => tcpipKernelSession.Source.Process());
 
-            } else if (parameters.ContainsKey(ArgParser.Parameters.pid.ToString()))
+            } else if (parameters.ContainsKey(ArgParser.Parameters.pids.ToString()))
             {
-                pid = Convert.ToUInt16(parameters[ArgParser.Parameters.pid.ToString()]);
+                ArgParser.readPids(parameters[ArgParser.Parameters.pids.ToString()], pids);
             }
             else
             {
@@ -107,8 +108,11 @@ namespace YAETWi
                         }
                     case ConsoleKey.D:
                         {
-                            ETW.dumpETWProviders();
-                            ETW.dumpKernelEvents();
+                            Logger.printPids();
+                            if (kernel)
+                                ETW.dumpKernelEvents();
+                            else
+                                ETW.dumpETWProviders();
                         }
                         break;
                     case ConsoleKey.V:
@@ -131,10 +135,10 @@ namespace YAETWi
                         break;
                     case ConsoleKey.P:
                         {
-                            Console.Write("Enter PID to monitor:");
-                            string p = Console.ReadLine();
+                            Console.Write("Enter comma-separated list of pids to monitor:");
+                            string input = Console.ReadLine();
                             ETW.refreshCollection();
-                            pid = Convert.ToInt32(p);
+                            ArgParser.readPids(input, pids);
                             break;
                         }
                     case ConsoleKey.H:

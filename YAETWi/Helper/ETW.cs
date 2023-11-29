@@ -14,12 +14,14 @@ namespace YAETWi.Helper
 
     public static class ETW
     {
-        private static HashSet<string> kernelEvents = new HashSet<string>();
         private static ConcurrentDictionary<string, Data.Tracer> providerToTracer = new ConcurrentDictionary<string, Data.Tracer>();
+        private static HashSet<string> kernelEvents = new HashSet<string>();
         public static Provider provider = new Provider();
 
         public static void refreshCollection()
         {
+            Program.pids = new HashSet<int>();
+            Logger.printInfo("successfully refreshed pids");
             Logger.printInfo("refreshing collection...");
             foreach (string p in provider.providersByName.Keys)
             {
@@ -39,7 +41,9 @@ namespace YAETWi.Helper
                     t.events = new ConcurrentQueue<int>();
                     t.eventMap = describeEvents(p);
                     t.opcodeMap = describeOpcodes(p);
+                    t.isTraced = false;
                     providerToTracer.TryAdd(guid, t);
+
                 }
                 catch (Exception){}
             }
@@ -63,7 +67,7 @@ namespace YAETWi.Helper
 
             session.Source.Kernel.All += ((TraceEvent data) =>
             {
-                if (data.ProcessID == Program.pid)
+                if (Program.pids.Contains(data.ProcessID))
                 {
                     Program.events++;
                     kernelEvents.Add(data.GetType().ToString());
@@ -101,7 +105,7 @@ namespace YAETWi.Helper
 
             session.Source.AllEvents += ((TraceEvent data) =>
             {
-                if (data.ProcessID == Program.pid)
+                if (Program.pids.Contains(data.ProcessID))
                 {
                     if (!data.ProviderGuid.ToString().Equals("00000000-0000-0000-0000-000000000000"))
                     {

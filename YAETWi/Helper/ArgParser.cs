@@ -12,7 +12,7 @@ namespace YAETWi.Helper
     {
         public enum Parameters
         { 
-            pid,
+            pids,
             externalIP,
             provider,
             verbose,
@@ -37,6 +37,22 @@ namespace YAETWi.Helper
                 }
             }
             return parameters;
+        }
+
+        public static void readPids(string csl, HashSet<int> pids)
+        {
+            try
+            {
+                int[] p = Array.ConvertAll(csl.Split(','), int.Parse);
+                for (int i = 0; i < p.Length; i++)
+                {
+                    pids.Add(p[i]);
+                }
+            }
+            catch
+            {
+                Logger.printNCFailure("Error parsing input. Example: 1,2,3");
+            }
         }
     }
 }

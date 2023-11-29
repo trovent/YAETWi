@@ -54,5 +54,13 @@ namespace YAETWi.Helper
                 data.OpcodeName
                 ));
         }
+        public static void printPids()
+        {
+            Console.WriteLine("\nPIDs: ");
+            foreach (int pid in Program.pids)
+            {
+                Console.WriteLine(pid);
+            }
+        }
     }
 }
