@@ -17,18 +17,23 @@ YAETWi allows you to trace a particular process based on its PID (-> YAETWix) or
 ### MAN pages
 ```
 Usage:
-         .\YAETWi.exe
-		/externalIP=<IP>  | /pid=<PID>		<- IP address the connections to be protocolled from | PID of the process (YAETWix or alternatively WinDBG can be used to suspend the process on its start)
-		[/verbose]				<- enables more verbose output (can be toggled via keystroke while process execution)
- 		[/kernel]				<- start kernel session 
+         YAETWi.exe
+                /externalIP=<IP> | /pids=<comma-separated list of pids to be traced>
+                [/verbose]
+                [/kernel]
+
 Keystrokes:
          'd' -> (dump) all traced providers
          'r' -> (read) provider name to print detailed output for
          'c' -> (clear) all events
-         'p' -> change (pid) to be traced -> previous collections will be purged
+         'p' -> manually provide comma-separated pids to be traced -> all collections and pids will be purged; (!) list is not immune to pids discovered through 'externalIP' parameter afterwards
          'v' -> switch (verbose) mode
-         'h' -> print keystrokes
+         'h' -> show (help) menu
 ```
+
+### Changelog
+* v2.2.0 
+  * provides capability to trace multiple PIDs
 
 # YAETWix
 
