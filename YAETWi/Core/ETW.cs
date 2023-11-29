@@ -8,14 +8,15 @@ using System.Collections.Generic;
 using System.Diagnostics.Eventing.Reader;
 using System.Threading.Tasks;
 using YAETWi.Data;
+using YAETWi.Helper;
 
-namespace YAETWi.Helper
+namespace YAETWi.Core
 {
 
     public static class ETW
     {
-        private static ConcurrentDictionary<string, Data.Tracer> providerToTracer = new ConcurrentDictionary<string, Data.Tracer>();
-        private static HashSet<string> kernelEvents = new HashSet<string>();
+        public static ConcurrentDictionary<string, Data.Tracer> providerToTracer = new ConcurrentDictionary<string, Data.Tracer>();
+        public static HashSet<string> kernelEvents = new HashSet<string>();
         public static Provider provider = new Provider();
 
         public static void refreshCollection()
@@ -37,8 +38,9 @@ namespace YAETWi.Helper
                     {
                         t = new Data.Tracer(p);
                     }
-                    t.opcodes = new ConcurrentQueue<int>();
-                    t.events = new ConcurrentQueue<int>();
+                    t.provider = p;
+                    t.pidToEvent = new ConcurrentDictionary<int, ConcurrentQueue<Event>>();
+                    t.pidToOpcode = new ConcurrentDictionary<int, ConcurrentQueue<Opcode>>();
                     t.eventMap = describeEvents(p);
                     t.opcodeMap = describeOpcodes(p);
                     t.isTraced = false;
@@ -48,15 +50,6 @@ namespace YAETWi.Helper
                 catch (Exception){}
             }
             Logger.printInfo("successfully refreshed the collection");
-        }
-
-        public static void dumpKernelEvents()
-        {
-            Console.WriteLine("\nKernel Events:");
-            foreach (string kevent in kernelEvents)
-            {
-                Console.WriteLine(kevent);
-            }
         }
 
         public static void traceKernel(TraceEventSession session)
@@ -116,10 +109,25 @@ namespace YAETWi.Helper
                             Data.Tracer t = providerToTracer[data.ProviderGuid.ToString()];
                             int eventID = UInt16.Parse(data.EventName.Split('(', ')')[1]);
                             int opcodeID = (int)data.Opcode;
-                            t.events.Enqueue(eventID);
-                            t.opcodes.Enqueue(opcodeID);
-                            t.data = data;
+                            ConcurrentQueue<Data.Event> events;
+                            ConcurrentQueue<Data.Opcode> opcodes;
+                            if (t.pidToEvent.TryGetValue(data.ProcessID, out events))
+                            { }
+                            else
+                            {
+                                events = new ConcurrentQueue<Event>();
+                            }
+                            if (t.pidToOpcode.TryGetValue(data.ProcessID, out opcodes))
+                            { }
+                            else
+                            {
+                                opcodes = new ConcurrentQueue<Opcode>();
+                            }
+                            events.Enqueue(new Data.Event(data.TimeStamp, eventID, data.ProcessID));
+                            opcodes.Enqueue(new Data.Opcode(data.TimeStamp, opcodeID, data.ProcessID));
                             t.isTraced = true;
+                            t.pidToEvent[data.ProcessID] = events;
+                            t.pidToOpcode[data.ProcessID] = opcodes;
                         }
                         catch (Exception) {}
                     }
@@ -154,33 +162,6 @@ namespace YAETWi.Helper
                 dict[o.Value] = o.DisplayName;
             }
             return dict;
-        }
-
-        public static void dumpETWProvider(string p)
-        {
-            try
-            {
-                string guid = provider.providersAll[p];
-                Logger.printSeparatorStart();
-                providerToTracer[guid].print();
-                Logger.printSeparatorEnd();
-            }
-            catch (Exception)
-            {
-                Logger.printNCFailure("wrong provider name");
-            }
-        }
-
-        public static void dumpETWProviders()
-        {
-            Console.WriteLine("\nETW Providers: ");
-            foreach (KeyValuePair<string, Data.Tracer> kvp in providerToTracer)
-            {
-                if (kvp.Value.isTraced)
-                {
-                    Console.WriteLine(kvp.Value.provider);
-                }
-            }
         }
 
         private static void parseKernelEvents(TraceEvent data)

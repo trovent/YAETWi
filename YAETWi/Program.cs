@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 
 using Microsoft.Diagnostics.Tracing.Parsers;
@@ -8,6 +7,7 @@ using Microsoft.Diagnostics.Tracing.Parsers.Kernel;
 using Microsoft.Diagnostics.Tracing.Session;
 
 using YAETWi.Helper;
+using YAETWi.Core;
 
 namespace YAETWi
 {
@@ -103,16 +103,19 @@ namespace YAETWi
                         {
                             Console.Write("Enter provider name:");
                             string p = Console.ReadLine();
-                            ETW.dumpETWProvider(p);
+                            foreach (int pid in pids)
+                            {
+                                Logger.dumpETWProvider(p, pid);
+                            }
                             break;
                         }
                     case ConsoleKey.D:
                         {
                             Logger.printPids();
                             if (kernel)
-                                ETW.dumpKernelEvents();
+                                Logger.dumpKernelEvents();
                             else
-                                ETW.dumpETWProviders();
+                                Logger.dumpETWProviders();
                         }
                         break;
                     case ConsoleKey.V:

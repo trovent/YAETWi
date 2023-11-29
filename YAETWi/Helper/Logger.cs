@@ -1,5 +1,7 @@
 ﻿using Microsoft.Diagnostics.Tracing;
 using System;
+using System.Collections.Generic;
+using YAETWi.Core;
 
 namespace YAETWi.Helper
 {
@@ -60,6 +62,42 @@ namespace YAETWi.Helper
             foreach (int pid in Program.pids)
             {
                 Console.WriteLine(pid);
+            }
+        }
+
+        public static void dumpKernelEvents()
+        {
+            Console.WriteLine("\nKernel Events:");
+            foreach (string kevent in ETW.kernelEvents)
+            {
+                Console.WriteLine(kevent);
+            }
+        }
+
+        public static void dumpETWProvider(string p, int pid)
+        {
+            try
+            {
+                string guid = ETW.provider.providersAll[p];
+                Logger.printSeparatorStart();
+                ETW.providerToTracer[guid].print(pid);
+                Logger.printSeparatorEnd();
+            }
+            catch (Exception e)
+            {
+                Logger.printNCFailure(e.ToString());
+            }
+        }
+
+        public static void dumpETWProviders()
+        {
+            Console.WriteLine("\nETW Providers: ");
+            foreach (KeyValuePair<string, Data.Tracer> kvp in ETW.providerToTracer)
+            {
+                if (kvp.Value.isTraced)
+                {
+                    Console.WriteLine(kvp.Value.provider);
+                }
             }
         }
     }

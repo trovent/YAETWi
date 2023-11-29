@@ -93,10 +93,12 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Data\Event.cs" />
+    <Compile Include="Data\Opcode.cs" />
     <Compile Include="Data\Provider.cs" />
     <Compile Include="Data\Tracer.cs" />
     <Compile Include="Helper\ArgParser.cs" />
-    <Compile Include="Helper\ETW.cs" />
+    <Compile Include="Core\ETW.cs" />
     <Compile Include="Helper\Help.cs" />
     <Compile Include="Helper\Logger.cs" />
     <Compile Include="Program.cs" />
