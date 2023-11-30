@@ -33,7 +33,7 @@ namespace YAETWi
             {
                 tcpipKernelSession = new TraceEventSession(KernelTraceEventParser.KernelSessionName);
                 tcpipKernelSession.EnableKernelProvider(KernelTraceEventParser.Keywords.NetworkTCPIP);
-                Console.WriteLine(String.Format("[*] starting tcpip session"));
+                Logger.printInfo("Starting TCPIP Session");
 
                 tcpipKernelSession.Source.Kernel.TcpIpAccept += ((TcpIpConnectTraceData data) =>
                 {
@@ -42,8 +42,8 @@ namespace YAETWi
 
                     if (data.daddr.ToString() == parameters[ArgParser.Parameters.externalIP.ToString()])
                     {
-                        extConn++;
                         pids.Add(data.ProcessID);
+                        extConn++;
                     }
                 });
                 Task.Run(() => tcpipKernelSession.Source.Process());
