@@ -16,6 +16,7 @@ namespace YAETWi.Data
         public ConcurrentDictionary<int, ConcurrentQueue<Opcode>> pidToOpcode { get; set; }
         public Dictionary<int, string> eventMap { get; set; }
         public Dictionary<int, string> opcodeMap { get; set; }
+        public Dictionary<int, string> templateMap { get; set; }
 
 
         public Tracer(string provider)

@@ -42,8 +42,8 @@ namespace YAETWi
 
                     if (data.daddr.ToString() == parameters[ArgParser.Parameters.externalIP.ToString()])
                     {
-                        extConn++;
                         pids.Add(data.ProcessID);
+                        extConn++;
                     }
                 });
                 Task.Run(() => tcpipKernelSession.Source.Process());

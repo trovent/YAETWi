@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using Microsoft.Diagnostics.Tracing;
 
 namespace YAETWi.Data
 {
@@ -11,12 +12,12 @@ namespace YAETWi.Data
         public int pid;
         public string processName;
 
-        public Opcode(DateTime timestamp, int id, int pid) 
+        public Opcode(TraceEvent data) 
         {
-            this.timestamp = timestamp;
-            this.id = id;
-            this.pid = pid;
-            this.processName = Process.GetProcessById(pid).ProcessName;
+            this.timestamp = data.TimeStamp;
+            this.id = (int)data.Opcode;
+            this.pid = data.ProcessID;
+            this.processName = Process.GetProcessById(data.ProcessID).ProcessName;
         }
         public String resolveOpcodeMap(Dictionary<int, string> opcodeMap)
         {

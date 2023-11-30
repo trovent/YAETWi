@@ -43,6 +43,7 @@ namespace YAETWi.Core
                     t.pidToOpcode = new ConcurrentDictionary<int, ConcurrentQueue<Opcode>>();
                     t.eventMap = describeEvents(p);
                     t.opcodeMap = describeOpcodes(p);
+                    t.templateMap = describeTemplates(p);
                     t.isTraced = false;
                     providerToTracer.TryAdd(guid, t);
 
@@ -96,7 +97,7 @@ namespace YAETWi.Core
 
             Logger.printInfo("activated all ETW providers");
 
-            session.Source.AllEvents += ((TraceEvent data) =>
+            session.Source.Dynamic.All += ((TraceEvent data) =>
             {
                 if (Program.pids.Contains(data.ProcessID))
                 {
@@ -107,8 +108,6 @@ namespace YAETWi.Core
                             Program.events++;
 
                             Data.Tracer t = providerToTracer[data.ProviderGuid.ToString()];
-                            int eventID = UInt16.Parse(data.EventName.Split('(', ')')[1]);
-                            int opcodeID = (int)data.Opcode;
                             ConcurrentQueue<Data.Event> events;
                             ConcurrentQueue<Data.Opcode> opcodes;
                             if (t.pidToEvent.TryGetValue(data.ProcessID, out events))
@@ -123,8 +122,8 @@ namespace YAETWi.Core
                             {
                                 opcodes = new ConcurrentQueue<Opcode>();
                             }
-                            events.Enqueue(new Data.Event(data.TimeStamp, eventID, data.ProcessID));
-                            opcodes.Enqueue(new Data.Opcode(data.TimeStamp, opcodeID, data.ProcessID));
+                            events.Enqueue(new Data.Event(data));
+                            opcodes.Enqueue(new Data.Opcode(data));
                             t.isTraced = true;
                             t.pidToEvent[data.ProcessID] = events;
                             t.pidToOpcode[data.ProcessID] = opcodes;
@@ -140,6 +139,17 @@ namespace YAETWi.Core
         private static void traceETWProvider(TraceEvent data)
         {
             Logger.printVerbose(String.Format("{0}:{1}", data.ProcessID, data.ProviderName));
+        }
+
+        public static Dictionary<int, string> describeTemplates(string provider)
+        {
+            Dictionary<int, string> dict = new Dictionary<int, string>();
+            ProviderMetadata meta = new ProviderMetadata(provider);
+            foreach (EventMetadata m in meta.Events)
+            {
+                dict[(int)m.Id] = m.Template;
+            }
+            return dict;
         }
 
         public static Dictionary<int, string> describeEvents(string provider)
