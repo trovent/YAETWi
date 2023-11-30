@@ -34,7 +34,8 @@ Keystrokes:
 ### Changelog
 * v2.2.0 
   * provides capability to trace multiple PIDs
-
+* v2.3.1
+  * data source has been changed to a dynamic one providing capabilities for event/payload parsing
 # YAETWix
 
 ### Description
