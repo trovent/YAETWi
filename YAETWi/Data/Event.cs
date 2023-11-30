@@ -19,7 +19,6 @@ namespace YAETWi.Data
         public Event(TraceEvent data)
         {
             this.timestamp = data.TimeStamp;
-            //this.id = UInt16.Parse(data.EventName.Split('(', ')')[1]);
             this.id = (int)data.ID;
             this.pid = data.ProcessID;
             this.processName = Process.GetProcessById(data.ProcessID).ProcessName;

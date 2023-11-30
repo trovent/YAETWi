@@ -1,6 +1,7 @@
 ﻿using Microsoft.Diagnostics.Tracing;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using YAETWi.Core;
 
 namespace YAETWi.Helper
@@ -96,7 +97,7 @@ namespace YAETWi.Helper
             {
                 if (kvp.Value.isTraced)
                 {
-                    Console.WriteLine(kvp.Value.provider);
+                    Console.WriteLine(String.Format("{0}: [{1}]", kvp.Value.provider, String.Join(",", kvp.Value.pidToEvent.Keys)));
                 }
             }
         }
