@@ -4,9 +4,11 @@ namespace YAETWi.Helper
 {
     public static class Help
     {
+        private static string version = "\nv2.3.2\n";
         public static void usage()
         {
-            Console.WriteLine("Usage:\n\t YAETWi.exe\n" +
+            Console.WriteLine("Version:" + version + "\n" +
+            "Usage:\n\t YAETWi.exe\n" +
             "\t\t/externalIP=<IP> | /pids=<comma-separated list of pids to be traced>\n" +
             "\t\t[/verbose]\n" +
             "\t\t[/kernel]\n");

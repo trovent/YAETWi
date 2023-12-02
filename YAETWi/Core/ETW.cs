@@ -21,7 +21,6 @@ namespace YAETWi.Core
 
         public static void refreshCollection()
         {
-            Program.pids = new HashSet<int>();
             Logger.printInfo("successfully refreshed pids");
             Logger.printInfo("refreshing collection...");
             foreach (string p in provider.providersByName.Keys)

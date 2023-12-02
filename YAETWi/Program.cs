@@ -132,6 +132,7 @@ namespace YAETWi
                         break;
                     case ConsoleKey.C:
                         {
+                            Program.pids = new HashSet<int>();
                             ETW.refreshCollection();
                             Logger.printInfo("Purged collections");
                         }
