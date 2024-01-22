@@ -3,6 +3,8 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Text;
+using System.IO;
+
 using YAETWi.Core;
 
 namespace YAETWi.Data
@@ -28,8 +30,8 @@ namespace YAETWi.Data
 
         public Tracer() { }
 
-        public void print(int pid)
-        {            
+        private string prepOutput(int pid)
+        {
             StringBuilder builder = new StringBuilder();
             builder.Append(String.Format("[*] Provider: {0} <-> GUID: {1}\n", provider, ETW.provider.providersAll?[provider] ?? ""));
             builder.Append("EventIDs: \n");
@@ -42,7 +44,31 @@ namespace YAETWi.Data
             {
                 builder.Append(o.resolveOpcodeMap(opcodeMap));
             }
-            Console.WriteLine(builder.ToString());
+            return builder.ToString();
         }
+
+        public void print(int pid)
+        {
+            Console.WriteLine(prepOutput(pid));
+        }
+
+        public void write(int pid, string provider)
+        {
+            string o = prepOutput(pid);
+            try
+            {
+                using (var f = File.AppendText(provider + ".txt"))
+                {
+                    f.WriteLine(o);
+                    f.Close();
+                }
+                Console.WriteLine("Dumped to " + provider + ".txt");
+            }
+            catch (Exception er)
+            {
+                Console.WriteLine(er);
+            }
+        }
+
     }
 }

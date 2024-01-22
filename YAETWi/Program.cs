@@ -33,6 +33,7 @@ namespace YAETWi
             {
                 tcpipKernelSession = new TraceEventSession(KernelTraceEventParser.KernelSessionName);
                 tcpipKernelSession.EnableKernelProvider(KernelTraceEventParser.Keywords.NetworkTCPIP);
+
                 Logger.printInfo("Starting TCPIP Session");
 
                 tcpipKernelSession.Source.Kernel.TcpIpAccept += ((TcpIpConnectTraceData data) =>
@@ -46,6 +47,7 @@ namespace YAETWi
                         extConn++;
                     }
                 });
+
                 Task.Run(() => tcpipKernelSession.Source.Process());
 
             } else if (parameters.ContainsKey(ArgParser.Parameters.pids.ToString()))
@@ -103,10 +105,14 @@ namespace YAETWi
                         {
                             Console.Write("Enter provider name:");
                             string p = Console.ReadLine();
-                            foreach (int pid in pids)
-                            {
-                                Logger.dumpETWProvider(p, pid);
-                            }
+                            Logger.dumpETWProvider(p);
+                            break;
+                        }
+                    case ConsoleKey.W:
+                        {
+                            Console.Write("Enter provider name:");
+                            string p = Console.ReadLine();
+                            Logger.writeETWProvider(p);
                             break;
                         }
                     case ConsoleKey.D:
