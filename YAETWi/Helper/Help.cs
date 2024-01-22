@@ -4,7 +4,7 @@ namespace YAETWi.Helper
 {
     public static class Help
     {
-        private static string version = "\nv2.3.2\n";
+        private static string version = "\nv2.4.0\n";
         public static void usage()
         {
             Console.WriteLine("Version:" + version + "\n" +
@@ -24,6 +24,7 @@ namespace YAETWi.Helper
                 "Keystrokes:\n" +
                 "\t 'd' -> (dump) all traced providers\n" +
                 "\t 'r' -> (read) provider name to print detailed output for\n" +
+                "\t 'w' -> (write) output of particular provider down to a file\n" +
                 "\t 'c' -> (clear) all events\n" +
                 "\t 'p' -> manually provide comma-separated pids to be traced -> all collections and pids will be purged; (!) list is not immune to pids discovered through 'externalIP' parameter afterwards\n" +
                 "\t 'v' -> switch (verbose) mode\n" +

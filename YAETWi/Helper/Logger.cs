@@ -75,18 +75,37 @@ namespace YAETWi.Helper
             }
         }
 
-        public static void dumpETWProvider(string p, int pid)
+        public static void dumpETWProvider(string p)
         {
-            try
+            foreach (int pid in Program.pids)
             {
-                string guid = ETW.provider.providersAll[p];
-                Logger.printSeparatorStart();
-                ETW.providerToTracer[guid].print(pid);
-                Logger.printSeparatorEnd();
+                try
+                {
+                    string guid = ETW.provider.providersAll[p];
+                    Logger.printSeparatorStart();
+                    ETW.providerToTracer[guid].print(pid);
+                    Logger.printSeparatorEnd();
+                }
+                catch (Exception e)
+                {
+                    Logger.printNCFailure(e.ToString());
+                }
             }
-            catch (Exception e)
+        }
+
+        public static void writeETWProvider(string p)
+        {
+            foreach (int pid in Program.pids)
             {
-                Logger.printNCFailure(e.ToString());
+                try
+                {
+                    string guid = ETW.provider.providersAll[p];
+                    ETW.providerToTracer[guid].write(pid, p);
+                }
+                catch (Exception e)
+                {
+                    Logger.printNCFailure(e.ToString());
+                }
             }
         }
 
