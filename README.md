@@ -25,6 +25,7 @@ Usage:
 Keystrokes:
          'd' -> (dump) all traced providers
          'r' -> (read) provider name to print detailed output for
+		 'w' -> (write) output of particular provider down to a file
          'c' -> (clear) all events
          'p' -> manually provide comma-separated pids to be traced -> all collections and pids will be purged; (!) list is not immune to pids discovered through 'externalIP' parameter afterwards
          'v' -> switch (verbose) mode
@@ -36,6 +37,10 @@ Keystrokes:
   * provides capability to trace multiple PIDs
 * v2.3.1
   * data source has been changed to a dynamic one providing capabilities for event/payload parsing
+* v2.4.0
+  * provides an option to write an output down to file
+  * all commits from now on are signed with a key 745FB4B5625BE79B68E39AA5F6E89A9718CB6CCD
+
 # YAETWix
 
 ### Description
