@@ -41,7 +41,7 @@ namespace YAETWi.Data
             { 
                 desc = ""; 
             }
-            return String.Format("\t[{0}][{1} -> {2}] {3} -> {4}\n\t[{5}]\n\n", timestamp, pid, processName, id, desc, payload);
+            return String.Format("\t[{0}][{1} -> {2}] {3} -> {4}\n\t[{5}]\n", timestamp, pid, processName, id, desc, payload);
         }
     }
 }

@@ -36,14 +36,52 @@ namespace YAETWi.Data
             StringBuilder builder = new StringBuilder();
             builder.Append(String.Format("[*] Provider: {0} <-> GUID: {1}\n", provider, ETW.provider.providersAll?[provider] ?? ""));
             builder.Append("EventIDs: \n");
+            /* prepare extensive output */
             foreach (Event e in pidToEvent[pid])
             {
                 builder.Append(e.resolveEventMap(eventMap));
             }
-            builder.Append("OpcodeIDs: \n");
+
+            builder.Append("\nEvents chain:\n");
+            /* prepare short output */
+            Dictionary<string, List<int>> shortMapper = new Dictionary<string, List<int>>();
+            foreach (Event e in pidToEvent[pid])
+            {
+                if (!shortMapper.ContainsKey(e.timestamp.ToString()))
+                {
+                    shortMapper.Add(e.timestamp.ToString(), new List<int>());
+                }
+                List<int> arr = shortMapper[e.timestamp.ToString()];
+                arr.Add(e.id);
+                shortMapper[e.timestamp.ToString()] = arr;
+            }
+            foreach (KeyValuePair<string, List<int>> entry in shortMapper)
+            {
+                builder.Append(String.Format("\t[{0}]: {1}\n", entry.Key, String.Join("->", entry.Value)));
+            }
+
+            builder.Append("\nOpcodeIDs: \n");
+            /* prepare extensive output */
             foreach (Opcode o in pidToOpcode[pid])
             {
                 builder.Append(o.resolveOpcodeMap(opcodeMap));
+            }
+
+            builder.Append("\nOpcodes chain:\n");
+            /* prepare short output */
+            foreach (Opcode e in pidToOpcode[pid])
+            {
+                if (!shortMapper.ContainsKey(e.timestamp.ToString()))
+                {
+                    shortMapper.Add(e.timestamp.ToString(), new List<int>());
+                }
+                List<int> arr = shortMapper[e.timestamp.ToString()];
+                arr.Add(e.id);
+                shortMapper[e.timestamp.ToString()] = arr;
+            }
+            foreach (KeyValuePair<string, List<int>> entry in shortMapper)
+            {
+                builder.Append(String.Format("\t[{0}]: {1}\n", entry.Key, String.Join("->", entry.Value)));
             }
             return builder.ToString();
         }
