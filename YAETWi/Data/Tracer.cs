@@ -6,6 +6,7 @@ using System.Text;
 using System.IO;
 
 using YAETWi.Core;
+using System.Reflection;
 
 namespace YAETWi.Data
 {
@@ -52,12 +53,17 @@ namespace YAETWi.Data
             Console.WriteLine(prepOutput(pid));
         }
 
-        public void write(int pid, string provider)
+        public void write(int pid, string provider, string directory)
         {
             string o = prepOutput(pid);
+            if (String.IsNullOrEmpty(directory))
+            {
+                directory = System.IO.Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
+            }
+            Console.WriteLine("will be written to " + directory);
             try
             {
-                using (var f = File.AppendText(provider + ".txt"))
+                using (var f = File.AppendText(String.Format("{0}\\{1}.txt", directory, provider)))
                 {
                     f.WriteLine(o);
                     f.Close();

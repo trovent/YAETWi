@@ -112,7 +112,9 @@ namespace YAETWi
                         {
                             Console.Write("Enter provider name:");
                             string p = Console.ReadLine();
-                            Logger.writeETWProvider(p);
+                            Console.Write("Enter directory to save file in (if empty, the file will be kept in the current directory):");
+                            string d = Console.ReadLine();
+                            Logger.writeETWProvider(p, d);
                             break;
                         }
                     case ConsoleKey.D:

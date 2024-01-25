@@ -4,7 +4,7 @@ namespace YAETWi.Helper
 {
     public static class Help
     {
-        private static string version = "\nv2.4.0\n";
+        private static string version = "\nv2.4.1\n";
         public static void usage()
         {
             Console.WriteLine("Version:" + version + "\n" +

@@ -93,14 +93,14 @@ namespace YAETWi.Helper
             }
         }
 
-        public static void writeETWProvider(string p)
+        public static void writeETWProvider(string provider, string directory)
         {
             foreach (int pid in Program.pids)
             {
                 try
                 {
-                    string guid = ETW.provider.providersAll[p];
-                    ETW.providerToTracer[guid].write(pid, p);
+                    string guid = ETW.provider.providersAll[provider];
+                    ETW.providerToTracer[guid].write(pid, provider, directory);
                 }
                 catch (Exception e)
                 {
