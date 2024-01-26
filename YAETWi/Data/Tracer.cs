@@ -35,16 +35,23 @@ namespace YAETWi.Data
         {
             StringBuilder builder = new StringBuilder();
             builder.Append(String.Format("[*] Provider: {0} <-> GUID: {1}\n", provider, ETW.provider.providersAll?[provider] ?? ""));
-            builder.Append("EventIDs: \n");
+            
             /* prepare extensive output */
+            builder.Append("EventIDs: \n");
             foreach (Event e in pidToEvent[pid])
             {
                 builder.Append(e.resolveEventMap(eventMap));
             }
 
-            builder.Append("\nEvents chain:\n");
+            builder.Append("\nOpcodeIDs: \n");
+            foreach (Opcode o in pidToOpcode[pid])
+            {
+                builder.Append(o.resolveOpcodeMap(opcodeMap));
+            }
+
             /* prepare short output */
             Dictionary<string, List<int>> shortMapper = new Dictionary<string, List<int>>();
+            builder.Append("\nEvent chains:\n");
             foreach (Event e in pidToEvent[pid])
             {
                 if (!shortMapper.ContainsKey(e.timestamp.ToString()))
@@ -60,15 +67,7 @@ namespace YAETWi.Data
                 builder.Append(String.Format("\t[{0}]: {1}\n", entry.Key, String.Join("->", entry.Value)));
             }
 
-            builder.Append("\nOpcodeIDs: \n");
-            /* prepare extensive output */
-            foreach (Opcode o in pidToOpcode[pid])
-            {
-                builder.Append(o.resolveOpcodeMap(opcodeMap));
-            }
-
-            builder.Append("\nOpcodes chain:\n");
-            /* prepare short output */
+            builder.Append("\nOpcode chains:\n");
             foreach (Opcode e in pidToOpcode[pid])
             {
                 if (!shortMapper.ContainsKey(e.timestamp.ToString()))

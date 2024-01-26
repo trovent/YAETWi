@@ -1,6 +1,7 @@
 ﻿using Microsoft.Diagnostics.Tracing;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using YAETWi.Core;
 
@@ -62,7 +63,7 @@ namespace YAETWi.Helper
             Console.WriteLine("\nPIDs: ");
             foreach (int pid in Program.pids)
             {
-                Console.WriteLine(pid);
+                Console.WriteLine(String.Format("{0} -> {1}", pid, Process.GetProcessById(pid).ProcessName));
             }
         }
 
