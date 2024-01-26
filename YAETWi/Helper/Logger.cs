@@ -1,9 +1,11 @@
 ﻿using Microsoft.Diagnostics.Tracing;
 using System;
+using System.Text;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using YAETWi.Core;
+using System.Collections.Concurrent;
 
 namespace YAETWi.Helper
 {
@@ -70,9 +72,9 @@ namespace YAETWi.Helper
         public static void dumpKernelEvents()
         {
             Console.WriteLine("\nKernel Events:");
-            foreach (string kevent in ETW.kernelEvents)
+            foreach (KeyValuePair<string, HashSet<string>> kvp in ETW.kProviderTimestampMap)
             {
-                Console.WriteLine(kevent);
+                Console.WriteLine(String.Format("{0}\n\t{1}", kvp.Key, String.Join("\n\t", kvp.Value)));
             }
         }
 
@@ -84,7 +86,7 @@ namespace YAETWi.Helper
                 {
                     string guid = ETW.provider.providersAll[p];
                     Logger.printSeparatorStart();
-                    ETW.providerToTracer[guid].print(pid);
+                    ETW.providerTracerMap[guid].print(pid);
                     Logger.printSeparatorEnd();
                 }
                 catch (Exception e)
@@ -101,7 +103,7 @@ namespace YAETWi.Helper
                 try
                 {
                     string guid = ETW.provider.providersAll[provider];
-                    ETW.providerToTracer[guid].write(pid, provider, directory);
+                    ETW.providerTracerMap[guid].write(pid, provider, directory);
                 }
                 catch (Exception e)
                 {
@@ -113,11 +115,21 @@ namespace YAETWi.Helper
         public static void dumpETWProviders()
         {
             Console.WriteLine("\nETW Providers: ");
-            foreach (KeyValuePair<string, Data.Tracer> kvp in ETW.providerToTracer)
+            foreach (KeyValuePair<string, Data.Tracer> kvp in ETW.providerTracerMap)
             {
+                /* dump timestamps of all triggered events for particular provider. Helps to make correlations with the testing events */
+                HashSet<string> timestamps = new HashSet<string>();
                 if (kvp.Value.isTraced)
                 {
-                    Console.WriteLine(String.Format("{0}: [{1}]", kvp.Value.provider, String.Join(",", kvp.Value.pidToEvent.Keys)));
+                    foreach (KeyValuePair<int, ConcurrentQueue<Data.Event>> ikvp in kvp.Value.pidToEvent)
+                    {
+                        foreach (Data.Event e in ikvp.Value)
+                        {
+                            timestamps.Add(String.Format("[{0}]", e.timestamp.ToString()));
+                        }
+                    }
+                    /* dump output */
+                    Console.WriteLine(String.Format("{0}: [{1}]\n\t{2}", kvp.Value.provider, String.Join(",", kvp.Value.pidToEvent.Keys), String.Join("\n\t", timestamps)));
                 }
             }
         }

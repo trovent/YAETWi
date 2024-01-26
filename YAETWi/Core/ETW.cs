@@ -6,6 +6,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics.Eventing.Reader;
+using System.Linq;
 using System.Threading.Tasks;
 using YAETWi.Data;
 using YAETWi.Helper;
@@ -15,8 +16,8 @@ namespace YAETWi.Core
 
     public static class ETW
     {
-        public static ConcurrentDictionary<string, Data.Tracer> providerToTracer = new ConcurrentDictionary<string, Data.Tracer>();
-        public static HashSet<string> kernelEvents = new HashSet<string>();
+        public static ConcurrentDictionary<string, Data.Tracer> providerTracerMap = new ConcurrentDictionary<string, Data.Tracer>();
+        public static ConcurrentDictionary<string, HashSet<string>> kProviderTimestampMap = new ConcurrentDictionary<string, HashSet<string>>();
         public static Provider provider = new Provider();
 
         public static void refreshCollection()
@@ -29,9 +30,9 @@ namespace YAETWi.Core
                 try
                 {
                     Data.Tracer t;
-                    if (providerToTracer.ContainsKey(guid))
+                    if (providerTracerMap.ContainsKey(guid))
                     {
-                        providerToTracer.TryRemove(guid, out t);
+                        providerTracerMap.TryRemove(guid, out t);
                     }
                     else
                     {
@@ -44,7 +45,7 @@ namespace YAETWi.Core
                     t.opcodeMap = describeOpcodes(p);
                     t.templateMap = describeTemplates(p);
                     t.isTraced = false;
-                    providerToTracer.TryAdd(guid, t);
+                    providerTracerMap.TryAdd(guid, t);
 
                 }
                 catch (Exception){}
@@ -63,7 +64,13 @@ namespace YAETWi.Core
                 if (Program.pids.Contains(data.ProcessID))
                 {
                     Program.events++;
-                    kernelEvents.Add(data.GetType().ToString());
+                    if (!kProviderTimestampMap.ContainsKey(data.GetType().FullName))
+                    {
+                        kProviderTimestampMap.TryAdd(data.GetType().FullName, new HashSet<string>());
+                    }
+                    HashSet<string> timestamps = kProviderTimestampMap[data.GetType().FullName];
+                    timestamps.Add(String.Format("[{0}]", data.TimeStamp.ToString()));
+                    kProviderTimestampMap[data.GetType().FullName] = timestamps;
                     if (Program.verbose)
                     {
                         parseKernelEvents(data);
@@ -106,7 +113,7 @@ namespace YAETWi.Core
                         {
                             Program.events++;
 
-                            Data.Tracer t = providerToTracer[data.ProviderGuid.ToString()];
+                            Data.Tracer t = providerTracerMap[data.ProviderGuid.ToString()];
                             ConcurrentQueue<Data.Event> events;
                             ConcurrentQueue<Data.Opcode> opcodes;
                             if (t.pidToEvent.TryGetValue(data.ProcessID, out events))
