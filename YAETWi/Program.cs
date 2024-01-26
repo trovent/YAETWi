@@ -18,13 +18,11 @@ namespace YAETWi
         private static int extConn = 0;
         public static int events = 0;
         public static bool kernel = false;
-        public static bool verbose = false;
+        public static string kProvider = "";
 
         static void Main(string[] args)
         {
             parameters = Helper.ArgParser.parse(args);
-            if (parameters.ContainsKey(ArgParser.Parameters.verbose.ToString()))
-                verbose = true;
             if (parameters.ContainsKey(ArgParser.Parameters.kernel.ToString()))
                 kernel = true;
 
@@ -105,7 +103,15 @@ namespace YAETWi
                         {
                             Console.Write("Enter provider name:");
                             string p = Console.ReadLine();
-                            Logger.dumpETWProvider(p);
+                            if (kernel)
+                            {
+                                kProvider = p;
+                                Console.WriteLine(String.Format("Started listener for {0} provider. Waiting for connections.\n", kProvider));
+                            }
+                            else
+                            {
+                                Logger.dumpETWProvider(p);
+                            }
                             break;
                         }
                     case ConsoleKey.W:
@@ -121,21 +127,12 @@ namespace YAETWi
                         {
                             Logger.printPids();
                             if (kernel)
+                            {
                                 Logger.dumpKernelEvents();
+                                kProvider = "";
+                            }
                             else
                                 Logger.dumpETWProviders();
-                        }
-                        break;
-                    case ConsoleKey.V:
-                        if (!verbose)
-                        {
-                            verbose = true;
-                            Logger.printInfo("Enabled verbose mode");
-                        }
-                        else
-                        {
-                            verbose = false;
-                            Logger.printInfo("Disabled verbose mode");
                         }
                         break;
                     case ConsoleKey.C:

@@ -20,6 +20,10 @@ namespace YAETWi.Helper
         {
             Console.WriteLine(String.Format("\n\t[!] {0}", text));
         }
+        public static void printWarn(string text)
+        {
+            Console.WriteLine(String.Format("\n[!] {0}", text));
+        }
 
         public static void printVerbose(string text)
         {
