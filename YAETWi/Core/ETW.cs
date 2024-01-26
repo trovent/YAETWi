@@ -278,30 +278,37 @@ namespace YAETWi.Core
             else if (data is FileIOCreateTraceData && kProvider.Equals("FileIOCreateTraceData"))
             {
                 Logger.logKernel(data);
+                Console.WriteLine(String.Format("\t\t\tFileName:{0}", ((FileIOCreateTraceData)data).FileName));
             }
             else if (data is FileIODirEnumTraceData && kProvider.Equals("FileIODirEnumTraceData"))
             {
                 Logger.logKernel(data);
+                Console.WriteLine(String.Format("\t\t\tFileName:{0}", ((FileIODirEnumTraceData)data).FileName));
             }
             else if (data is FileIOInfoTraceData && kProvider.Equals("FileIOInfoTraceData"))
             {
                 Logger.logKernel(data);
+                Console.WriteLine(String.Format("\t\t\tFileName:{0}", ((FileIOInfoTraceData)data).FileName));
             }
             else if (data is FileIONameTraceData && kProvider.Equals("FileIONameTraceData"))
             {
                 Logger.logKernel(data);
+                Console.WriteLine(String.Format("\t\t\tFileName:{0}", ((FileIONameTraceData)data).FileName));
             }
             else if (data is FileIOOpEndTraceData && kProvider.Equals("FileIOOpEndTraceData"))
             {
                 Logger.logKernel(data);
+                Console.WriteLine(String.Format("\t\t\tIrpPtr:{0}", ((FileIOOpEndTraceData)data).IrpPtr));
             }
             else if (data is FileIOReadWriteTraceData && kProvider.Equals("FileIOReadWriteTraceData"))
             {
                 Logger.logKernel(data);
+                Console.WriteLine(String.Format("\t\t\tFileName:{0}", ((FileIOReadWriteTraceData)data).FileName));
             }
             else if (data is FileIOSimpleOpTraceData && kProvider.Equals("FileIOSimpleOpTraceData"))
             {
                 Logger.logKernel(data);
+                Console.WriteLine(String.Format("\t\t\tFileName:{0}", ((FileIOSimpleOpTraceData)data).FileName));
             } 
             else if (data is HeaderExtensionTraceData && kProvider.Equals("HeaderExtensionTraceData"))
             {
@@ -355,12 +362,12 @@ namespace YAETWi.Core
             else if (data is MemoryPageAccessTraceData && kProvider.Equals("MemoryPageAccessTraceData"))
             {
                 Logger.logKernel(data);
-                Console.WriteLine(String.Format("\t\t\tpageKind: {0}\n", ((MemoryPageAccessTraceData)data).PageKind));
+                Console.WriteLine(String.Format("\t\t\tPageKind:{0}\n", ((MemoryPageAccessTraceData)data).PageKind));
             }
             else if (data is MemoryPageFaultTraceData && kProvider.Equals("MemoryPageFaultTraceData"))
             {
                 Logger.logKernel(data);
-                Console.WriteLine(String.Format("\t\t\tvirtualAddress: {0}\n", ((MemoryPageFaultTraceData)data).VirtualAddress));
+                Console.WriteLine(String.Format("\t\t\tVirtualAddress:{0}\n", ((MemoryPageFaultTraceData)data).VirtualAddress));
             }
             else if (data is MemoryProcessMemInfoTraceData && kProvider.Equals("MemoryProcessMemInfoTraceData"))
             {
@@ -401,7 +408,7 @@ namespace YAETWi.Core
             else if (data is RegistryTraceData && kProvider.Equals("RegistryTraceData"))
             {
                 Logger.logKernel(data);
-                Console.WriteLine(String.Format("\t\t\t{0}\tregistry: {1}:{2}\n", data.ProcessID, ((RegistryTraceData)data).KeyName, ((RegistryTraceData)data).ValueName));
+                Console.WriteLine(String.Format("\t\t\t{0}\tregistry:{1}:{2}\n", data.ProcessID, ((RegistryTraceData)data).KeyName, ((RegistryTraceData)data).ValueName));
             }
             else if (data is SampledProfileIntervalTraceData && kProvider.Equals("SampledProfileIntervalTraceData"))
             {
@@ -490,7 +497,16 @@ namespace YAETWi.Core
             else if (data is TcpIpConnectTraceData && kProvider.Equals("TcpIpConnectTraceData"))
             {
                 Logger.logKernel(data);
-                Console.WriteLine(String.Format("\t\t\trcvwin: {0}\n", ((TcpIpConnectTraceData)data).rcvwin));
+                Console.WriteLine(String.Format("\t\t\twsopt:{0}\n\t\t\ttsopt{1}\n\t\t\tsize:{2}\n\t\t\tseqnum:{3]\n\t\t\tsndwinscale:{4}\n\t\t\trcvwinscale:{5}\n\t\t\trcvwin:{6}\n\t\t\tmss:{7}\n\t\t\tsackopt:{8}",  
+                                                                        ((TcpIpConnectTraceData)data).wsopt,
+                                                                        ((TcpIpConnectTraceData)data).tsopt,
+                                                                        ((TcpIpConnectTraceData)data).size,
+                                                                        ((TcpIpConnectTraceData)data).seqnum,
+                                                                        ((TcpIpConnectTraceData)data).sndwinscale,
+                                                                        ((TcpIpConnectTraceData)data).rcvwinscale,
+                                                                        ((TcpIpConnectTraceData)data).rcvwin,
+                                                                        ((TcpIpConnectTraceData)data).mss,
+                                                                        ((TcpIpConnectTraceData)data).sackopt));
             }
             else if (data is TcpIpFailTraceData && kProvider.Equals("TcpIpFailTraceData"))
             {
@@ -499,12 +515,15 @@ namespace YAETWi.Core
             else if (data is TcpIpSendTraceData && kProvider.Equals("TcpIpSendTraceData"))
             {
                 Logger.logKernel(data);
-                Console.WriteLine(String.Format("\t\t\tsize:{1} -> {0}\n",((TcpIpSendTraceData)data).size, ((TcpIpSendTraceData)data).sport));
+                Console.WriteLine(String.Format("\t\t\tsize:{0}\n\t\t\tseqnum:{1}\n\t\t\tconnid:{2}",
+                                                                          ((TcpIpSendTraceData)data).size, 
+                                                                          ((TcpIpSendTraceData)data).seqnum,
+                                                                          ((TcpIpSendTraceData)data).connid));
             }
             else if (data is TcpIpTraceData && kProvider.Equals("TcpIpTraceData"))
             {
                 Logger.logKernel(data);
-                Console.WriteLine(String.Format("\t\t\tconnId: {0}\n", ((TcpIpTraceData)data).connid));
+                Console.WriteLine(String.Format("\t\t\tseqnum:{0}\n\t\t\tsize:{1}", ((TcpIpTraceData)data).seqnum, ((TcpIpTraceData)data).size));
             }            
             else if (data is TcpIpV6ConnectTraceData && kProvider.Equals("TcpIpV6ConnectTraceData"))
             {
@@ -541,7 +560,7 @@ namespace YAETWi.Core
             else if (data is VirtualAllocTraceData && kProvider.Equals("VirtualAllocTraceData"))
             {
                 Logger.logKernel(data);
-                Console.WriteLine(String.Format("\t\t\topcodeName: {0}\n", ((VirtualAllocTraceData)data).OpcodeName));
+                Console.WriteLine(String.Format("\t\t\tOpcodeName:{0}\n", ((VirtualAllocTraceData)data).OpcodeName));
             }
             else if (data is VolumeMappingTraceData && kProvider.Equals("VolumeMappingTraceData"))
             {
