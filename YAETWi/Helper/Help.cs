@@ -4,13 +4,12 @@ namespace YAETWi.Helper
 {
     public static class Help
     {
-        private static string version = "\nv2.4.0\n";
+        private static string version = "\nv2.7.1\n";
         public static void usage()
         {
             Console.WriteLine("Version:" + version + "\n" +
             "Usage:\n\t YAETWi.exe\n" +
             "\t\t/externalIP=<IP> | /pids=<comma-separated list of pids to be traced>\n" +
-            "\t\t[/verbose]\n" +
             "\t\t[/kernel]\n");
         }
         public static void print()
@@ -27,7 +26,6 @@ namespace YAETWi.Helper
                 "\t 'w' -> (write) output of particular provider down to a file\n" +
                 "\t 'c' -> (clear) all events\n" +
                 "\t 'p' -> manually provide comma-separated pids to be traced -> all collections and pids will be purged; (!) list is not immune to pids discovered through 'externalIP' parameter afterwards\n" +
-                "\t 'v' -> switch (verbose) mode\n" +
                 "\t 'h' -> show (help) menu");
         }
     }

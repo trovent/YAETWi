@@ -6,6 +6,7 @@ using System.Text;
 using System.IO;
 
 using YAETWi.Core;
+using System.Reflection;
 
 namespace YAETWi.Data
 {
@@ -34,15 +35,52 @@ namespace YAETWi.Data
         {
             StringBuilder builder = new StringBuilder();
             builder.Append(String.Format("[*] Provider: {0} <-> GUID: {1}\n", provider, ETW.provider.providersAll?[provider] ?? ""));
+            
+            /* prepare extensive output */
             builder.Append("EventIDs: \n");
             foreach (Event e in pidToEvent[pid])
             {
                 builder.Append(e.resolveEventMap(eventMap));
             }
-            builder.Append("OpcodeIDs: \n");
+
+            builder.Append("\nOpcodeIDs: \n");
             foreach (Opcode o in pidToOpcode[pid])
             {
                 builder.Append(o.resolveOpcodeMap(opcodeMap));
+            }
+
+            /* prepare short output */
+            Dictionary<string, List<int>> shortMapper = new Dictionary<string, List<int>>();
+            builder.Append("\nEvent chains:\n");
+            foreach (Event e in pidToEvent[pid])
+            {
+                if (!shortMapper.ContainsKey(e.timestamp.ToString()))
+                {
+                    shortMapper.Add(e.timestamp.ToString(), new List<int>());
+                }
+                List<int> arr = shortMapper[e.timestamp.ToString()];
+                arr.Add(e.id);
+                shortMapper[e.timestamp.ToString()] = arr;
+            }
+            foreach (KeyValuePair<string, List<int>> entry in shortMapper)
+            {
+                builder.Append(String.Format("\t[{0}]: {1}\n", entry.Key, String.Join("->", entry.Value)));
+            }
+
+            builder.Append("\nOpcode chains:\n");
+            foreach (Opcode e in pidToOpcode[pid])
+            {
+                if (!shortMapper.ContainsKey(e.timestamp.ToString()))
+                {
+                    shortMapper.Add(e.timestamp.ToString(), new List<int>());
+                }
+                List<int> arr = shortMapper[e.timestamp.ToString()];
+                arr.Add(e.id);
+                shortMapper[e.timestamp.ToString()] = arr;
+            }
+            foreach (KeyValuePair<string, List<int>> entry in shortMapper)
+            {
+                builder.Append(String.Format("\t[{0}]: {1}\n", entry.Key, String.Join("->", entry.Value)));
             }
             return builder.ToString();
         }
@@ -52,12 +90,17 @@ namespace YAETWi.Data
             Console.WriteLine(prepOutput(pid));
         }
 
-        public void write(int pid, string provider)
+        public void write(int pid, string provider, string directory)
         {
             string o = prepOutput(pid);
+            if (String.IsNullOrEmpty(directory))
+            {
+                directory = System.IO.Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
+            }
+            Console.WriteLine("will be written to " + directory);
             try
             {
-                using (var f = File.AppendText(provider + ".txt"))
+                using (var f = File.AppendText(String.Format("{0}\\{1}.txt", directory, provider)))
                 {
                     f.WriteLine(o);
                     f.Close();

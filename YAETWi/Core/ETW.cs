@@ -6,6 +6,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics.Eventing.Reader;
+using System.Linq;
 using System.Threading.Tasks;
 using YAETWi.Data;
 using YAETWi.Helper;
@@ -15,39 +16,46 @@ namespace YAETWi.Core
 
     public static class ETW
     {
-        public static ConcurrentDictionary<string, Data.Tracer> providerToTracer = new ConcurrentDictionary<string, Data.Tracer>();
-        public static HashSet<string> kernelEvents = new HashSet<string>();
+        public static ConcurrentDictionary<string, Data.Tracer> providerTracerMap = new ConcurrentDictionary<string, Data.Tracer>();
+        public static ConcurrentDictionary<string, HashSet<string>> kProviderTimestampMap = new ConcurrentDictionary<string, HashSet<string>>();
         public static Provider provider = new Provider();
 
         public static void refreshCollection()
         {
             Logger.printInfo("successfully refreshed pids");
             Logger.printInfo("refreshing collection...");
-            foreach (string p in provider.providersByName.Keys)
+            if (Program.kernel)
             {
-                string guid = provider.providersAll[p];
-                try
+                kProviderTimestampMap.Clear();
+            }
+            else
+            {
+                foreach (string p in provider.providersByName.Keys)
                 {
-                    Data.Tracer t;
-                    if (providerToTracer.ContainsKey(guid))
+                    string guid = provider.providersAll[p];
+                    try
                     {
-                        providerToTracer.TryRemove(guid, out t);
-                    }
-                    else
-                    {
-                        t = new Data.Tracer(p);
-                    }
-                    t.provider = p;
-                    t.pidToEvent = new ConcurrentDictionary<int, ConcurrentQueue<Event>>();
-                    t.pidToOpcode = new ConcurrentDictionary<int, ConcurrentQueue<Opcode>>();
-                    t.eventMap = describeEvents(p);
-                    t.opcodeMap = describeOpcodes(p);
-                    t.templateMap = describeTemplates(p);
-                    t.isTraced = false;
-                    providerToTracer.TryAdd(guid, t);
+                        Data.Tracer t;
+                        if (providerTracerMap.ContainsKey(guid))
+                        {
+                            providerTracerMap.TryRemove(guid, out t);
+                        }
+                        else
+                        {
+                            t = new Data.Tracer(p);
+                        }
+                        t.provider = p;
+                        t.pidToEvent = new ConcurrentDictionary<int, ConcurrentQueue<Event>>();
+                        t.pidToOpcode = new ConcurrentDictionary<int, ConcurrentQueue<Opcode>>();
+                        t.eventMap = describeEvents(p);
+                        t.opcodeMap = describeOpcodes(p);
+                        t.templateMap = describeTemplates(p);
+                        t.isTraced = false;
+                        providerTracerMap.TryAdd(guid, t);
 
+                    }
+                    catch (Exception){}
                 }
-                catch (Exception){}
             }
             Logger.printInfo("successfully refreshed the collection");
         }
@@ -56,6 +64,7 @@ namespace YAETWi.Core
         {
             session = new TraceEventSession("kernel session");
             Logger.printInfo("starting kernel session");
+            Logger.printWarn("see source code to specify the messages on particular Kernel providers -> no support for formatted messages for the Kernel events is provided by the Microsoft.Diagnostics.Tracing.Parsers.Kernel");
             session.EnableKernelProvider(KernelTraceEventParser.Keywords.All);
 
             session.Source.Kernel.All += ((TraceEvent data) =>
@@ -63,11 +72,15 @@ namespace YAETWi.Core
                 if (Program.pids.Contains(data.ProcessID))
                 {
                     Program.events++;
-                    kernelEvents.Add(data.GetType().ToString());
-                    if (Program.verbose)
+                    if (!kProviderTimestampMap.ContainsKey(data.GetType().Name))
                     {
-                        parseKernelEvents(data);
+                        kProviderTimestampMap.TryAdd(data.GetType().Name, new HashSet<string>());
                     }
+                    HashSet<string> timestamps = kProviderTimestampMap[data.GetType().Name];
+                    timestamps.Add(String.Format("[{0}]", data.TimeStamp.ToString()));
+                    kProviderTimestampMap[data.GetType().Name] = timestamps;
+
+                    parseKernelEvents(data);
                 }
             });
 
@@ -83,8 +96,7 @@ namespace YAETWi.Core
                 try
                 {
                     session.EnableProvider(p);
-                    if (Program.verbose)
-                        Logger.printVerbose(String.Format("activated provider: {0}", p));
+                    Logger.printVerbose(String.Format("activated provider: {0}", p));
                 }
                 catch (Exception)
                 {
@@ -106,7 +118,7 @@ namespace YAETWi.Core
                         {
                             Program.events++;
 
-                            Data.Tracer t = providerToTracer[data.ProviderGuid.ToString()];
+                            Data.Tracer t = providerTracerMap[data.ProviderGuid.ToString()];
                             ConcurrentQueue<Data.Event> events;
                             ConcurrentQueue<Data.Opcode> opcodes;
                             if (t.pidToEvent.TryGetValue(data.ProcessID, out events))
@@ -175,360 +187,388 @@ namespace YAETWi.Core
 
         private static void parseKernelEvents(TraceEvent data)
         {
-            if (data is ALPCReceiveMessageTraceData)
+            string kProvider = Program.kProvider;
+
+            if (data is ALPCReceiveMessageTraceData && kProvider.Equals("ALPCReceiveMessageTraceData"))
             {
                 Logger.logKernel(data);
             } 
-            else if (data is ALPCSendMessageTraceData)
+            else if (data is ALPCSendMessageTraceData && kProvider.Equals("ALPCSendMessageTraceData"))
             {
                 Logger.logKernel(data);
             } 
-            else if (data is ALPCUnwaitTraceData)
+            else if (data is ALPCUnwaitTraceData && kProvider.Equals("ALPCUnwaitTraceData"))
+            {
+                Logger.logKernel(data);
+                Console.WriteLine(String.Format("\t\t\tsource: {0}\n", ((ALPCUnwaitTraceData)data).Source));
+            }
+            else if (data is ALPCWaitForNewMessageTraceData && kProvider.Equals("ALPCWaitForNewMessageTraceData"))
+            {
+                Logger.logKernel(data);
+                Console.WriteLine(String.Format("\t\t\tportName: {0}",((ALPCWaitForNewMessageTraceData) data).PortName));
+            }
+            else if (data is ALPCWaitForReplyTraceData && kProvider.Equals("ALPCWaitForReplyTraceData"))
             {
                 Logger.logKernel(data);
             }
-            else if (data is ALPCWaitForNewMessageTraceData)
+            else if (data is BuildInfoTraceData && kProvider.Equals("BuildInfoTraceData"))
             {
                 Logger.logKernel(data);
             }
-            else if (data is ALPCWaitForReplyTraceData)
+            else if (data is CSwitchTraceData && kProvider.Equals("CSwitchTraceData"))
             {
                 Logger.logKernel(data);
             }
-            else if (data is BuildInfoTraceData)
+            else if (data is DequeueTraceData && kProvider.Equals("DequeueTraceData"))
             {
                 Logger.logKernel(data);
             }
-            else if (data is CSwitchTraceData)
-            {
-                Logger.logKernel(data);
-            }
-            else if (data is DequeueTraceData)
-            {
-                Logger.logKernel(data);
-            }
-            else if (data is DiskIOFlushBuffersTraceData)
-            {
-                Logger.logKernel(data);
-            } 
-            else if (data is DiskIOInitTraceData)
-            {
-                Logger.logKernel(data);
-            }
-            else if (data is DiskIOTraceData)
-            {
-                Logger.logKernel(data);
-            }
-            else if (data is DispatcherReadyThreadTraceData)
-            {
-                Logger.logKernel(data);
-            }
-            else if (data is DPCTraceData)
-            {
-                Logger.logKernel(data);
-            }
-            else if (data is DriverCompleteRequestReturnTraceData)
-            {
-                Logger.logKernel(data);
-            }
-            else if (data is DriverCompleteRequestTraceData)
+            else if (data is DiskIOFlushBuffersTraceData && kProvider.Equals("DiskIOFlushBuffersTraceData"))
             {
                 Logger.logKernel(data);
             } 
-            else if (data is DriverCompletionRoutineTraceData)
+            else if (data is DiskIOInitTraceData && kProvider.Equals("DiskIOInitTraceData"))
             {
                 Logger.logKernel(data);
             }
-            else if (data is DriverMajorFunctionCallTraceData)
+            else if (data is DiskIOTraceData && kProvider.Equals("DiskIOTraceData"))
             {
                 Logger.logKernel(data);
             }
-            else if (data is DriverMajorFunctionReturnTraceData)
+            else if (data is DispatcherReadyThreadTraceData && kProvider.Equals("DispatcherReadyThreadTraceData"))
             {
                 Logger.logKernel(data);
             }
-            else if (data is EmptyTraceData)
+            else if (data is DPCTraceData && kProvider.Equals("DPCTraceData"))
             {
                 Logger.logKernel(data);
             }
-            else if (data is EnqueueTraceData)
+            else if (data is DriverCompleteRequestReturnTraceData && kProvider.Equals("DriverCompleteRequestReturnTraceData"))
             {
                 Logger.logKernel(data);
             }
-            else if (data is EventTraceHeaderTraceData)
-            {
-                Logger.logKernel(data);
-            }
-            else if (data is FileIOCreateTraceData)
-            {
-                Logger.logKernel(data);
-            }
-            else if (data is FileIODirEnumTraceData)
-            {
-                Logger.logKernel(data);
-            }
-            else if (data is FileIOInfoTraceData)
-            {
-                Logger.logKernel(data);
-            }
-            else if (data is FileIONameTraceData)
-            {
-                Logger.logKernel(data);
-            }
-            else if (data is FileIOOpEndTraceData)
-            {
-                Logger.logKernel(data);
-            }
-            else if (data is FileIOReadWriteTraceData)
-            {
-                Logger.logKernel(data);
-            }
-            else if (data is FileIOSimpleOpTraceData)
+            else if (data is DriverCompleteRequestTraceData && kProvider.Equals("DriverCompleteRequestTraceData"))
             {
                 Logger.logKernel(data);
             } 
-            else if (data is HeaderExtensionTraceData)
+            else if (data is DriverCompletionRoutineTraceData && kProvider.Equals("DriverCompletionRoutineTraceData"))
             {
                 Logger.logKernel(data);
             }
-            else if (data is ImageLoadTraceData)
-            {
-                Logger.logKernel(data);
-                Console.WriteLine(String.Format("FileName: {0}",
-                    ((ImageLoadTraceData)data).FileName));
-            }
-            else if (data is ISRTraceData)
+            else if (data is DriverMajorFunctionCallTraceData && kProvider.Equals("DriverMajorFunctionCallTraceData"))
             {
                 Logger.logKernel(data);
             }
-            else if (data is LastBranchRecordTraceData)
+            else if (data is DriverMajorFunctionReturnTraceData && kProvider.Equals("DriverMajorFunctionReturnTraceData"))
             {
                 Logger.logKernel(data);
             }
-            else if (data is MapFileTraceData)
+            else if (data is EmptyTraceData && kProvider.Equals("EmptyTraceData"))
             {
                 Logger.logKernel(data);
             }
-            else if (data is MemInfoTraceData)
+            else if (data is EnqueueTraceData && kProvider.Equals("EnqueueTraceData"))
             {
                 Logger.logKernel(data);
             }
-            else if (data is MemoryHardFaultTraceData)
+            else if (data is EventTraceHeaderTraceData && kProvider.Equals("EventTraceHeaderTraceData"))
             {
                 Logger.logKernel(data);
             }
-            else if (data is MemoryHeapRangeCreateTraceData)
+            else if (data is FileIOCreateTraceData && kProvider.Equals("FileIOCreateTraceData"))
+            {
+                Logger.logKernel(data);
+                Console.WriteLine(String.Format("\t\t\tFileName:{0}", ((FileIOCreateTraceData)data).FileName));
+            }
+            else if (data is FileIODirEnumTraceData && kProvider.Equals("FileIODirEnumTraceData"))
+            {
+                Logger.logKernel(data);
+                Console.WriteLine(String.Format("\t\t\tFileName:{0}", ((FileIODirEnumTraceData)data).FileName));
+            }
+            else if (data is FileIOInfoTraceData && kProvider.Equals("FileIOInfoTraceData"))
+            {
+                Logger.logKernel(data);
+                Console.WriteLine(String.Format("\t\t\tFileName:{0}", ((FileIOInfoTraceData)data).FileName));
+            }
+            else if (data is FileIONameTraceData && kProvider.Equals("FileIONameTraceData"))
+            {
+                Logger.logKernel(data);
+                Console.WriteLine(String.Format("\t\t\tFileName:{0}", ((FileIONameTraceData)data).FileName));
+            }
+            else if (data is FileIOOpEndTraceData && kProvider.Equals("FileIOOpEndTraceData"))
+            {
+                Logger.logKernel(data);
+                Console.WriteLine(String.Format("\t\t\tIrpPtr:{0}", ((FileIOOpEndTraceData)data).IrpPtr));
+            }
+            else if (data is FileIOReadWriteTraceData && kProvider.Equals("FileIOReadWriteTraceData"))
+            {
+                Logger.logKernel(data);
+                Console.WriteLine(String.Format("\t\t\tFileName:{0}", ((FileIOReadWriteTraceData)data).FileName));
+            }
+            else if (data is FileIOSimpleOpTraceData && kProvider.Equals("FileIOSimpleOpTraceData"))
+            {
+                Logger.logKernel(data);
+                Console.WriteLine(String.Format("\t\t\tFileName:{0}", ((FileIOSimpleOpTraceData)data).FileName));
+            } 
+            else if (data is HeaderExtensionTraceData && kProvider.Equals("HeaderExtensionTraceData"))
             {
                 Logger.logKernel(data);
             }
-            else if (data is MemoryHeapRangeDestroyTraceData)
+            else if (data is ImageLoadTraceData && kProvider.Equals("ImageLoadTraceData"))
+            {
+                Logger.logKernel(data);
+                Console.WriteLine(String.Format("FileName: {0}",((ImageLoadTraceData)data).FileName));
+            }
+            else if (data is ISRTraceData && kProvider.Equals("ISRTraceData"))
             {
                 Logger.logKernel(data);
             }
-            else if (data is MemoryHeapRangeRundownTraceData)
+            else if (data is LastBranchRecordTraceData && kProvider.Equals("LastBranchRecordTraceData"))
             {
                 Logger.logKernel(data);
             }
-            else if (data is MemoryHeapRangeTraceData)
+            else if (data is MapFileTraceData && kProvider.Equals("MapFileTraceData"))
             {
                 Logger.logKernel(data);
             }
-            else if (data is MemoryImageLoadBackedTraceData)
+            else if (data is MemInfoTraceData && kProvider.Equals("MemInfoTraceData"))
             {
                 Logger.logKernel(data);
             }
-            else if (data is MemoryPageAccessTraceData)
+            else if (data is MemoryHardFaultTraceData && kProvider.Equals("MemoryHardFaultTraceData"))
             {
                 Logger.logKernel(data);
             }
-            else if (data is MemoryPageFaultTraceData)
+            else if (data is MemoryHeapRangeCreateTraceData && kProvider.Equals("MemoryHeapRangeCreateTraceData"))
             {
                 Logger.logKernel(data);
             }
-            else if (data is MemoryProcessMemInfoTraceData)
+            else if (data is MemoryHeapRangeDestroyTraceData && kProvider.Equals("MemoryHeapRangeDestroyTraceData"))
             {
                 Logger.logKernel(data);
             }
-            else if (data is MemorySystemMemInfoTraceData)
+            else if (data is MemoryHeapRangeRundownTraceData && kProvider.Equals("MemoryHeapRangeRundownTraceData"))
             {
                 Logger.logKernel(data);
             }
-            else if (data is ObjectDuplicateHandleTraceData)
+            else if (data is MemoryHeapRangeTraceData && kProvider.Equals("MemoryHeapRangeTraceData"))
             {
                 Logger.logKernel(data);
             }
-            else if (data is ObjectHandleTraceData)
+            else if (data is MemoryImageLoadBackedTraceData && kProvider.Equals("MemoryImageLoadBackedTraceData"))
             {
                 Logger.logKernel(data);
             }
-            else if (data is ObjectNameTraceData)
+            else if (data is MemoryPageAccessTraceData && kProvider.Equals("MemoryPageAccessTraceData"))
+            {
+                Logger.logKernel(data);
+                Console.WriteLine(String.Format("\t\t\tPageKind:{0}\n", ((MemoryPageAccessTraceData)data).PageKind));
+            }
+            else if (data is MemoryPageFaultTraceData && kProvider.Equals("MemoryPageFaultTraceData"))
+            {
+                Logger.logKernel(data);
+                Console.WriteLine(String.Format("\t\t\tVirtualAddress:{0}\n", ((MemoryPageFaultTraceData)data).VirtualAddress));
+            }
+            else if (data is MemoryProcessMemInfoTraceData && kProvider.Equals("MemoryProcessMemInfoTraceData"))
             {
                 Logger.logKernel(data);
             }
-            else if (data is ObjectTypeNameTraceData)
+            else if (data is MemorySystemMemInfoTraceData && kProvider.Equals("MemorySystemMemInfoTraceData"))
             {
                 Logger.logKernel(data);
             }
-            else if (data is PMCCounterProfTraceData)
+            else if (data is ObjectDuplicateHandleTraceData && kProvider.Equals("ObjectDuplicateHandleTraceData"))
             {
                 Logger.logKernel(data);
             }
-            else if (data is ProcessCtrTraceData)
+            else if (data is ObjectHandleTraceData && kProvider.Equals("ObjectHandleTraceData"))
             {
                 Logger.logKernel(data);
             }
-            else if (data is ProcessTraceData)
+            else if (data is ObjectNameTraceData && kProvider.Equals("ObjectNameTraceData"))
             {
                 Logger.logKernel(data);
             }
-            else if (data is RegistryTraceData)
-            {
-                Logger.logKernel(data);
-                Console.WriteLine(String.Format("\t\t\t{0}\tregistry: {1}:{2}\n", data.ProcessID, ((RegistryTraceData)data).KeyName, ((RegistryTraceData)data).ValueName));
-            }
-            else if (data is SampledProfileIntervalTraceData)
+            else if (data is ObjectTypeNameTraceData && kProvider.Equals("ObjectTypeNameTraceData"))
             {
                 Logger.logKernel(data);
             }
-            else if (data is SampledProfileTraceData)
+            else if (data is PMCCounterProfTraceData && kProvider.Equals("PMCCounterProfTraceData"))
             {
                 Logger.logKernel(data);
             }
-            else if (data is SplitIoInfoTraceData)
+            else if (data is ProcessCtrTraceData && kProvider.Equals("ProcessCtrTraceData"))
             {
                 Logger.logKernel(data);
             }
-            else if (data is StackWalkDefTraceData)
+            else if (data is ProcessTraceData && kProvider.Equals("ProcessTraceData"))
             {
                 Logger.logKernel(data);
             }
-            else if (data is StackWalkRefTraceData)
+            else if (data is RegistryTraceData && kProvider.Equals("RegistryTraceData"))
+            {
+                Logger.logKernel(data);
+                Console.WriteLine(String.Format("\t\t\t{0}\tregistry:{1}:{2}\n", data.ProcessID, ((RegistryTraceData)data).KeyName, ((RegistryTraceData)data).ValueName));
+            }
+            else if (data is SampledProfileIntervalTraceData && kProvider.Equals("SampledProfileIntervalTraceData"))
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is SampledProfileTraceData && kProvider.Equals("SampledProfileTraceData"))
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is SplitIoInfoTraceData && kProvider.Equals("SplitIoInfoTraceData"))
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is StackWalkDefTraceData && kProvider.Equals("StackWalkDefTraceData"))
+            {
+                Logger.logKernel(data);
+            }
+            else if (data is StackWalkRefTraceData && kProvider.Equals("StackWalkRefTraceData"))
             {
                 Logger.logKernel(data);
             } 
-            else if (data is StackWalkStackTraceData)
+            else if (data is StackWalkStackTraceData && kProvider.Equals("StackWalkStackTraceData"))
             {
                 Logger.logKernel(data);
             }
-            else if (data is StringTraceData)
+            else if (data is StringTraceData && kProvider.Equals("StringTraceData"))
             {
                 Logger.logKernel(data);
             }
-            else if (data is SysCallEnterTraceData)
+            else if (data is SysCallEnterTraceData && kProvider.Equals("SysCallEnterTraceData"))
             {
                 Logger.logKernel(data);
             }
-            else if (data is SysCallExitTraceData)
+            else if (data is SysCallExitTraceData && kProvider.Equals("SysCallExitTraceData"))
             {
                 Logger.logKernel(data);
             }
-            else if (data is SystemConfigCPUTraceData)
+            else if (data is SystemConfigCPUTraceData && kProvider.Equals("SystemConfigCPUTraceData"))
             {
                 Logger.logKernel(data);
             }
-            else if (data is SystemConfigIDEChannelTraceData)
+            else if (data is SystemConfigIDEChannelTraceData && kProvider.Equals("SystemConfigIDEChannelTraceData"))
             {
                 Logger.logKernel(data);
             }
-            else if (data is SystemConfigIRQTraceData)
+            else if (data is SystemConfigIRQTraceData && kProvider.Equals("SystemConfigIRQTraceData"))
             {
                 Logger.logKernel(data);
             }
-            else if (data is SystemConfigLogDiskTraceData)
+            else if (data is SystemConfigLogDiskTraceData && kProvider.Equals("SystemConfigLogDiskTraceData"))
             {
                 Logger.logKernel(data);
             }
-            else if (data is SystemConfigNetworkTraceData)
+            else if (data is SystemConfigNetworkTraceData && kProvider.Equals("SystemConfigNetworkTraceData"))
             {
                 Logger.logKernel(data);
             }
-            else if (data is SystemConfigNICTraceData)
+            else if (data is SystemConfigNICTraceData && kProvider.Equals("SystemConfigNICTraceData"))
             {
                 Logger.logKernel(data);
             }
-            else if (data is SystemConfigPhyDiskTraceData)
+            else if (data is SystemConfigPhyDiskTraceData && kProvider.Equals("SystemConfigPhyDiskTraceData"))
             {
                 Logger.logKernel(data);
             }
-            else if (data is SystemConfigPnPTraceData)
+            else if (data is SystemConfigPnPTraceData && kProvider.Equals("SystemConfigPnPTraceData"))
             {
                 Logger.logKernel(data);
             }
-            else if (data is SystemConfigPowerTraceData)
+            else if (data is SystemConfigPowerTraceData && kProvider.Equals("SystemConfigPowerTraceData"))
             {
                 Logger.logKernel(data);
             }
-            else if (data is SystemConfigServicesTraceData)
+            else if (data is SystemConfigServicesTraceData && kProvider.Equals("SystemConfigServicesTraceData"))
             {
                 Logger.logKernel(data);
             }
-            else if (data is SystemConfigVideoTraceData)
+            else if (data is SystemConfigVideoTraceData && kProvider.Equals("SystemConfigVideoTraceData"))
             {
                 Logger.logKernel(data);
             }
-            else if (data is SystemPathsTraceData)
+            else if (data is SystemPathsTraceData && kProvider.Equals("SystemPathsTraceData"))
             {
                 Logger.logKernel(data);
             }
-            else if (data is TcpIpConnectTraceData)
+            else if (data is TcpIpConnectTraceData && kProvider.Equals("TcpIpConnectTraceData"))
+            {
+                Logger.logKernel(data);
+                Console.WriteLine(String.Format("\t\t\twsopt:{0}\n\t\t\ttsopt{1}\n\t\t\tsize:{2}\n\t\t\tseqnum:{3]\n\t\t\tsndwinscale:{4}\n\t\t\trcvwinscale:{5}\n\t\t\trcvwin:{6}\n\t\t\tmss:{7}\n\t\t\tsackopt:{8}",  
+                                                                        ((TcpIpConnectTraceData)data).wsopt,
+                                                                        ((TcpIpConnectTraceData)data).tsopt,
+                                                                        ((TcpIpConnectTraceData)data).size,
+                                                                        ((TcpIpConnectTraceData)data).seqnum,
+                                                                        ((TcpIpConnectTraceData)data).sndwinscale,
+                                                                        ((TcpIpConnectTraceData)data).rcvwinscale,
+                                                                        ((TcpIpConnectTraceData)data).rcvwin,
+                                                                        ((TcpIpConnectTraceData)data).mss,
+                                                                        ((TcpIpConnectTraceData)data).sackopt));
+            }
+            else if (data is TcpIpFailTraceData && kProvider.Equals("TcpIpFailTraceData"))
             {
                 Logger.logKernel(data);
             }
-            else if (data is TcpIpFailTraceData)
+            else if (data is TcpIpSendTraceData && kProvider.Equals("TcpIpSendTraceData"))
+            {
+                Logger.logKernel(data);
+                Console.WriteLine(String.Format("\t\t\tsize:{0}\n\t\t\tseqnum:{1}\n\t\t\tconnid:{2}",
+                                                                          ((TcpIpSendTraceData)data).size, 
+                                                                          ((TcpIpSendTraceData)data).seqnum,
+                                                                          ((TcpIpSendTraceData)data).connid));
+            }
+            else if (data is TcpIpTraceData && kProvider.Equals("TcpIpTraceData"))
+            {
+                Logger.logKernel(data);
+                Console.WriteLine(String.Format("\t\t\tseqnum:{0}\n\t\t\tsize:{1}", ((TcpIpTraceData)data).seqnum, ((TcpIpTraceData)data).size));
+            }            
+            else if (data is TcpIpV6ConnectTraceData && kProvider.Equals("TcpIpV6ConnectTraceData"))
             {
                 Logger.logKernel(data);
             }
-            else if (data is TcpIpSendTraceData)
+            else if (data is TcpIpV6SendTraceData && kProvider.Equals("TcpIpV6SendTraceData"))
             {
                 Logger.logKernel(data);
             }
-            else if (data is TcpIpTraceData)
+            else if (data is TcpIpV6TraceData && kProvider.Equals("TcpIpV6TraceData"))
             {
                 Logger.logKernel(data);
             }
-            else if (data is TcpIpV6ConnectTraceData)
+            else if (data is ThreadSetNameTraceData && kProvider.Equals("ThreadSetNameTraceData"))
             {
                 Logger.logKernel(data);
             }
-            else if (data is TcpIpV6SendTraceData)
+            else if (data is ThreadTraceData && kProvider.Equals("ThreadTraceData"))
             {
                 Logger.logKernel(data);
             }
-            else if (data is TcpIpV6TraceData)
+            else if (data is UdpIpFailTraceData && kProvider.Equals("UdpIpFailTraceData"))
             {
                 Logger.logKernel(data);
             }
-            else if (data is ThreadSetNameTraceData)
+            else if (data is UdpIpTraceData && kProvider.Equals("UdpIpTraceData"))
             {
                 Logger.logKernel(data);
             }
-            else if (data is ThreadTraceData)
+            else if (data is UpdIpV6TraceData && kProvider.Equals("UpdIpV6TraceData"))
             {
                 Logger.logKernel(data);
             }
-            else if (data is UdpIpFailTraceData)
+            else if (data is VirtualAllocTraceData && kProvider.Equals("VirtualAllocTraceData"))
             {
                 Logger.logKernel(data);
+                Console.WriteLine(String.Format("\t\t\tOpcodeName:{0}\n", ((VirtualAllocTraceData)data).OpcodeName));
             }
-            else if (data is UdpIpTraceData)
-            {
-                Logger.logKernel(data);
-            }
-            else if (data is UpdIpV6TraceData)
-            {
-                Logger.logKernel(data);
-            }
-            else if (data is VirtualAllocTraceData )
-            {
-                Logger.logKernel(data);
-            }
-            else if (data is VolumeMappingTraceData)
+            else if (data is VolumeMappingTraceData && kProvider.Equals("VolumeMappingTraceData"))
             {
                 Logger.logKernel(data);
             }
             else
             {
-                Logger.printNCFailure(String.Format("Unknown TraceData type: {0}", data.GetType()));
+                //do nothing;
             }
         }
     }
