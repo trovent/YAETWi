@@ -19,16 +19,14 @@ YAETWi allows you to trace a particular process based on its PID (-> YAETWix) or
 Usage:
          YAETWi.exe
                 /externalIP=<IP> | /pids=<comma-separated list of pids to be traced>
-                [/verbose]
                 [/kernel]
 
 Keystrokes:
          'd' -> (dump) all traced providers
          'r' -> (read) provider name to print detailed output for
-		 'w' -> (write) output of particular provider down to a file
+         'w' -> (write) output of particular provider down to a file
          'c' -> (clear) all events
          'p' -> manually provide comma-separated pids to be traced -> all collections and pids will be purged; (!) list is not immune to pids discovered through 'externalIP' parameter afterwards
-         'v' -> switch (verbose) mode
          'h' -> show (help) menu
 ```
 
@@ -40,7 +38,10 @@ Keystrokes:
 * v2.4.0
   * provides an option to write an output down to file
   * all commits from now on are signed with a key 745FB4B5625BE79B68E39AA5F6E89A9718CB6CCD
-
+* v2.7.1
+  * removed verbose parameter
+  * provides an option to write down into a user-specified directory
+  * on dump shows timestamps of events for triggered providers
 # YAETWix
 
 ### Description
