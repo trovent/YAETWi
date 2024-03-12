@@ -47,6 +47,6 @@ Usage:
         .\YAETWix.exe <"full_path_to_binary + arguments">
 Example:
         .\YAETWix.exe "c:\windows\system32\cmd.exe /c whoami"
-Kestrokes:
+Keystrokes:
         r -> resume process
 ```

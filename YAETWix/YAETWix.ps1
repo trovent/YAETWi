@@ -1,9 +1,10 @@
-﻿using System;
-using System.Runtime.InteropServices;
+$YAETWix = @"
 
-namespace YAETWix
-{
-    public class Program
+using System;
+using System.Runtime.InteropServices;
+using System.Security.Permissions;
+
+public class YAETWix
     {
         [StructLayout(LayoutKind.Sequential)]
         struct STARTUPINFO
@@ -62,23 +63,8 @@ namespace YAETWix
             CREATE_SUSPENDED = 0x04
         }
 
-        private static void usage()
-        {
-            Console.WriteLine(String.Format("Usage:\n" +
-                "\t.\\YAETWix.exe <\"full_path_to_binary + arguments\">\n" +
-                "Example:\n" +
-                "\t.\\YAETWix.exe \"c:\\windows\\system32\\cmd.exe /c whoami\"\n" +
-                "Keystrokes:\n" +
-                "\tr -> resume process"));
-        }
-
         public static void Main(string[] args)
         {
-            if (args.Length == 0)
-            {
-                usage();
-                Environment.Exit(0);
-            }
 
             STARTUPINFO si = new STARTUPINFO();
             PROCESS_INFORMATION pi = new PROCESS_INFORMATION();
@@ -96,7 +82,7 @@ namespace YAETWix
 
             Console.WriteLine(String.Format("[!] Process has been created\n" +
                 "[*] PID: {0}\n[*] to resume process -> enter 'r'\n" +
-                "[*] to terminate process -> enter CTRL+C", pi.dwProcessId));
+                "[*] to terminate process -> enter CTRL+C", pi.dwProcessId)); 
 
             Console.CancelKeyPress += delegate (object sender, ConsoleCancelEventArgs e)
             {
@@ -120,5 +106,9 @@ namespace YAETWix
             }
 
         }
-    }
 }
+"@
+
+Add-Type $YAETWix
+
+
