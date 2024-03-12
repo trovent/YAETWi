@@ -48,6 +48,7 @@ Keystrokes:
 YAETWix is a helper tool, which puts any process into suspended mode, obtains its PID, which in turn can be provided to YAETWi as an argument, and continues its execution, after you're ready.
 
 ### MAN pages
+- YAETWix.exe
 ```
 Usage:
         .\YAETWix.exe <"full_path_to_binary + arguments">
@@ -55,4 +56,10 @@ Example:
         .\YAETWix.exe "c:\windows\system32\cmd.exe /c whoami"
 Keystrokes:
         r -> resume process
+```
+- YAETWix.ps1
+```
+. .\YAETWix.ps1
+
+[YAETWix]::Main("cmd.exe /c whoami")
 ```
